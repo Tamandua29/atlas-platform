@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "fix/**"
+      - "refactor/**"
+      - "chore/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, Types, Tests and Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Detect committed environment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.pem$|\.key$' || true)
+          allowed=$(printf '%s\n' "$forbidden" | grep -E '(^|/)\.env\.example$' || true)
+          blocked=$(comm -23 <(printf '%s\n' "$forbidden" | sort) <(printf '%s\n' "$allowed" | sort) || true)
+          if [ -n "$blocked" ]; then
+            echo "Forbidden sensitive files are tracked:"
+            echo "$blocked"
+            exit 1
+          fi
