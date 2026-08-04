@@ -40,3 +40,34 @@ export type OperationalPriorityConfiguration = {
   color: string;
   backgroundColor: string;
 };
+
+export type OperationalZoneType =
+  | "responsibility-area"
+  | "patrol-sector"
+  | "sensitive-area"
+  | "monitoring-area";
+
+export type OperationalZoneStatus =
+  | "active"
+  | "attention"
+  | "inactive";
+
+export type OperationalZone = {
+  id: string;
+  name: string;
+  description: string;
+  type: OperationalZoneType;
+  status: OperationalZoneStatus;
+  priority: OperationalPriority;
+  reference: string;
+  responsibleUnit: string;
+  coordinates: OperationalCoordinates[][];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OperationalZoneConfiguration = {
+  label: string;
+  color: string;
+  fillOpacity: number;
+};
