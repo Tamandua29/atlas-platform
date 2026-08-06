@@ -11,7 +11,14 @@ export type AirtableAuditFields = {
   "Tipo de Ação": string;
   "Origem da Ação": string;
   "Tabela ou Módulo Afetado": string;
+  "ID do Registro Afetado"?:
+    string;
+  "Campo Afetado"?: string;
+  "Valor Anterior"?: string;
+  "Valor Novo"?: string;
   "Identificador da Sessão ou Requisição": string;
+  "Identificador Técnico do Responsável"?:
+    string;
   "Resumo da Alteração": string;
   Resultado: string;
   "Nível de Impacto": string;
@@ -20,18 +27,60 @@ export type AirtableAuditFields = {
   "Registro Ativo": boolean;
 };
 
+function metadataString(
+  entry: AuditEntry,
+  key: string,
+): string | undefined {
+  const value =
+    entry.metadata?.[key];
+
+  return typeof value === "string"
+    ? value
+    : undefined;
+}
+
 export function mapAuditEntryToAirtable(
   entry: AuditEntry,
 ): AirtableAuditFields {
+  const isDecision =
+    entry.action ===
+    "individuals.duplicate-review.decide";
+
   return {
     "ID Auditoria":
       entry.id.value,
     "Data e Hora":
       entry.occurredAt.toISOString(),
-    "Tipo de Ação": "Acesso relevante",
+    "Tipo de Ação":
+      isDecision
+        ? "Decisão analítica"
+        : "Acesso relevante",
     "Origem da Ação": "Atlas",
     "Tabela ou Módulo Afetado":
       entry.action,
+    ...(isDecision
+      ? {
+          "ID do Registro Afetado":
+            metadataString(
+              entry,
+              "reviewRecordId",
+            ),
+          "Campo Afetado":
+            "Decisão Humana",
+          "Valor Anterior":
+            "Pendente",
+          "Valor Novo":
+            metadataString(
+              entry,
+              "decision",
+            ),
+          "Identificador Técnico do Responsável":
+            metadataString(
+              entry,
+              "actorId",
+            ),
+        }
+      : {}),
     "Identificador da Sessão ou Requisição":
       entry.correlationId,
     "Resumo da Alteração": [
