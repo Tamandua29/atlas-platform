@@ -14,6 +14,7 @@ type AirtableListResponse<RecordFields> = {
 };
 
 type AirtableListOptions = {
+  baseId?: string;
   fields?: string[];
   filterByFormula?: string;
   sort?: Array<{
@@ -80,7 +81,7 @@ export async function listAllAirtableRecords<RecordFields>(
 
     const endpoint =
       `${AIRTABLE_API_URL}/` +
-      `${configuration.baseId}/` +
+      `${options.baseId ?? configuration.baseId}/` +
       `${tableId}?` +
       searchParams.toString();
 
