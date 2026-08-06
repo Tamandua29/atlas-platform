@@ -6,6 +6,7 @@ import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import {
   getProtectedCorrectionProposalContext,
   saveCorrectionProposal,
+  type ProposalValues,
 } from "@/features/individuals/individual-data-correction-proposal";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const proposal = await saveCorrectionProposal({
       reviewId,
-      values: payload.values as Record<string, string>,
+      values: payload.values as ProposalValues,
       proposerId: session.actorId,
       proposedAt: new Date(),
     });
