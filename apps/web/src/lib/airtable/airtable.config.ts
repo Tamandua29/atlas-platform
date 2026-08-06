@@ -6,6 +6,7 @@ type AirtableConfiguration = {
   occurrencesTableId: string;
   addressesTableId: string;
   individualsTableId: string;
+  individualsPreviewBaseId: string;
 };
 
 function getRequiredEnvironmentVariable(
@@ -43,5 +44,11 @@ export function getAirtableConfiguration(): AirtableConfiguration {
     individualsTableId: getRequiredEnvironmentVariable(
       "AIRTABLE_INDIVIDUALS_TABLE_ID",
     ),
+
+    individualsPreviewBaseId:
+      process.env.AIRTABLE_INDIVIDUALS_PREVIEW_BASE_ID?.trim() ||
+      getRequiredEnvironmentVariable(
+        "AIRTABLE_BASE_ID",
+      ),
   };
 }
