@@ -60,15 +60,15 @@ export type CanonicalIndividualPreview = {
   readonly aliases: readonly string[];
   readonly normalizedAliases: readonly string[];
   readonly birthDate: string | null;
-  readonly cpf: string | null;
+  readonly cpfPresent: boolean;
   readonly cpfStructurallyValid: boolean;
-  readonly identityDocument: string | null;
+  readonly identityDocumentPresent: boolean;
   readonly motherName: string | null;
   readonly normalizedMotherName: string | null;
-  readonly matchKey: {
-    readonly strategy: "cpf" | "biographic";
-    readonly value: string;
-  } | null;
+  readonly matchKeyStrategy:
+    | "cpf"
+    | "biographic"
+    | null;
   readonly created: boolean;
 };
 
@@ -184,22 +184,27 @@ export async function previewCanonicalIndividualsFromAirtable(
           .birthDate
           ?.toISOString()
           .slice(0, 10) ?? null,
-      cpf:
-        result.individual.cpf ?? null,
+      cpfPresent:
+        Boolean(
+          result.individual.cpf,
+        ),
       cpfStructurallyValid:
         result.individual
           .cpfStructurallyValid,
-      identityDocument:
-        result.individual
-          .identityDocument ?? null,
+      identityDocumentPresent:
+        Boolean(
+          result.individual
+            .identityDocument,
+        ),
       motherName:
         result.individual
           .motherName ?? null,
       normalizedMotherName:
         result.individual
           .normalizedMotherName ?? null,
-      matchKey:
-        result.individual.matchKey,
+      matchKeyStrategy:
+        result.individual
+          .matchKey?.strategy ?? null,
       created: result.created,
     });
   }
