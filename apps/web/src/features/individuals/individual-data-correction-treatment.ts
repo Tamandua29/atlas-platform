@@ -23,6 +23,8 @@ type CorrectionTreatmentFields = {
   "Responsável Técnico do Saneamento"?: string;
   "Nota de Tratamento"?: string;
   "Atualizado em"?: string;
+  "Situação da Proposta"?: string;
+  "Proposta em"?: string;
 };
 
 export type CorrectionTreatmentStatus =
@@ -41,6 +43,8 @@ export type SafeCorrectionTreatmentItem = {
   assigneeId: string | null;
   treatmentNote: string | null;
   updatedAt: string | null;
+  proposalStatus: string | null;
+  proposedAt: string | null;
 };
 
 function statusFromAirtable(value: string | undefined): CorrectionTreatmentStatus {
@@ -72,6 +76,8 @@ function toSafeItem(fields: CorrectionTreatmentFields): SafeCorrectionTreatmentI
     assigneeId: fields["Responsável Técnico do Saneamento"]?.trim() || null,
     treatmentNote: fields["Nota de Tratamento"]?.trim() || null,
     updatedAt: fields["Atualizado em"] ?? null,
+    proposalStatus: fields["Situação da Proposta"] ?? null,
+    proposedAt: fields["Proposta em"] ?? null,
   };
 }
 
@@ -95,6 +101,8 @@ async function loadCorrectionRequests() {
         "Responsável Técnico do Saneamento",
         "Nota de Tratamento",
         "Atualizado em",
+        "Situação da Proposta",
+        "Proposta em",
       ],
       filterByFormula: "NOT({Chave Idempotente do Saneamento}='')",
       sort: [{ field: "Data de Abertura", direction: "desc" }],
