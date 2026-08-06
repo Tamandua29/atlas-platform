@@ -1,4 +1,7 @@
-import { ValidationError } from "../errors/application-error";
+import {
+  ConflictError,
+  ValidationError,
+} from "../errors/application-error";
 import { UniqueEntityId } from "../identifiers/unique-entity-id";
 
 export type DuplicateReviewStrategy =
@@ -9,8 +12,14 @@ export type DuplicateReviewConfidence =
   | "high"
   | "medium";
 
+export type FinalDuplicateReviewDecision =
+  | "same-person"
+  | "different-people"
+  | "inconclusive";
+
 export type DuplicateReviewDecision =
-  "pending";
+  | "pending"
+  | FinalDuplicateReviewDecision;
 
 export type DuplicateReviewItemInput = {
   readonly sourceRecordIds:
@@ -22,6 +31,14 @@ export type DuplicateReviewItemInput = {
   readonly reason: string;
   readonly correlationId: string;
   readonly openedAt: Date;
+};
+
+export type DecideDuplicateReviewInput = {
+  readonly decision:
+    FinalDuplicateReviewDecision;
+  readonly justification: string;
+  readonly reviewerId: string;
+  readonly decidedAt: Date;
 };
 
 function normalizeSourceRecordIds(
@@ -50,9 +67,18 @@ export class DuplicateReviewItem {
   readonly reason: string;
   readonly correlationId: string;
   readonly openedAt: Date;
-  readonly decision:
-    DuplicateReviewDecision;
-  readonly status: "open";
+
+  private _decision:
+    DuplicateReviewDecision =
+      "pending";
+  private _status:
+    "open" | "completed" =
+      "open";
+  private _justification?:
+    string;
+  private _reviewerId?:
+    string;
+  private _decidedAt?: Date;
 
   private constructor(
     input: DuplicateReviewItemInput,
@@ -73,8 +99,33 @@ export class DuplicateReviewItem {
       input.correlationId.trim();
     this.openedAt =
       new Date(input.openedAt);
-    this.decision = "pending";
-    this.status = "open";
+  }
+
+  get decision():
+    DuplicateReviewDecision {
+    return this._decision;
+  }
+
+  get status():
+    "open" | "completed" {
+    return this._status;
+  }
+
+  get justification():
+    string | undefined {
+    return this._justification;
+  }
+
+  get reviewerId():
+    string | undefined {
+    return this._reviewerId;
+  }
+
+  get decidedAt():
+    Date | undefined {
+    return this._decidedAt
+      ? new Date(this._decidedAt)
+      : undefined;
   }
 
   static create(
@@ -117,5 +168,53 @@ export class DuplicateReviewItem {
       input,
       sourceRecordIds,
     );
+  }
+
+  decide(
+    input:
+      DecideDuplicateReviewInput,
+  ): void {
+    if (this._status !== "open") {
+      throw new ConflictError(
+        "A revisão já possui uma decisão final.",
+      );
+    }
+
+    const justification =
+      input.justification.trim();
+    const reviewerId =
+      input.reviewerId.trim();
+
+    if (justification.length < 10) {
+      throw new ValidationError(
+        "A justificativa da decisão deve possuir ao menos 10 caracteres.",
+      );
+    }
+
+    if (!reviewerId) {
+      throw new ValidationError(
+        "O identificador técnico do revisor é obrigatório.",
+      );
+    }
+
+    if (
+      Number.isNaN(
+        input.decidedAt.getTime(),
+      )
+    ) {
+      throw new ValidationError(
+        "A data da decisão é inválida.",
+      );
+    }
+
+    this._decision =
+      input.decision;
+    this._justification =
+      justification;
+    this._reviewerId =
+      reviewerId;
+    this._decidedAt =
+      new Date(input.decidedAt);
+    this._status = "completed";
   }
 }
