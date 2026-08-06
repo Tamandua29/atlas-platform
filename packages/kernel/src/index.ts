@@ -124,3 +124,5 @@ export type {
 
 export { AuditEntry } from "./audit/audit-entry";
 export type { AuditEntryInput, AuditOutcome } from "./audit/audit-entry";
+
+export type { AuditRepository } from "./audit/audit-repository";
