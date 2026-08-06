@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ reviewRecordId: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const authorization = await authorizeAtlas(["reviewer"]);
+  const authorization = await authorizeAtlas(["reviewer", "auditor"]);
   if (!authorization.authorized) return authorization.response;
   const { session } = authorization;
   const { reviewRecordId } = await context.params;
