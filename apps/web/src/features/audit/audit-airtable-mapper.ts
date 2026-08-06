@@ -28,7 +28,7 @@ export function mapAuditEntryToAirtable(
       entry.id.value,
     "Data e Hora":
       entry.occurredAt.toISOString(),
-    "Tipo de Ação": "Consulta",
+    "Tipo de Ação": "Acesso relevante",
     "Origem da Ação": "Atlas",
     "Tabela ou Módulo Afetado":
       entry.action,
@@ -41,14 +41,14 @@ export function mapAuditEntryToAirtable(
     ].join("; "),
     Resultado:
       entry.outcome === "success"
-        ? "Sucesso"
+        ? "Concluída com sucesso"
         : entry.outcome === "partial"
-          ? "Parcial"
-          : "Falha",
+          ? "Concluída com ressalvas"
+          : "Falhou",
     "Nível de Impacto": "Baixo",
     "Requer Revisão": false,
     "Classificação da Informação":
-      "Uso Interno",
+      "Uso interno",
     "Registro Ativo": true,
   };
 }
