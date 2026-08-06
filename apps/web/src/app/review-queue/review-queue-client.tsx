@@ -186,19 +186,46 @@ export function ReviewQueueClient() {
       [items],
     );
 
+  async function authenticateAndLoad() {
+    const credential = apiKey.trim();
+
+    if (!credential) {
+      setError("Informe sua credencial institucional.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+      const payload = (await response.json()) as {
+        authenticated?: boolean;
+        message?: string;
+      };
+      if (!response.ok || !payload.authenticated) {
+        throw new Error(payload.message ?? "Não foi possível iniciar a sessão.");
+      }
+      setConnected(true);
+      setApiKey("");
+      await loadReviews(status);
+    } catch (caught) {
+      setConnected(false);
+      setItems([]);
+      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadReviews(
     nextStatus:
       ReviewStatus = status,
   ) {
-    const key = apiKey.trim();
-
-    if (!key) {
-      setError(
-        "Informe a chave interna para acessar a fila.",
-      );
-      return;
-    }
-
     setLoading(true);
     setError("");
 
@@ -207,10 +234,6 @@ export function ReviewQueueClient() {
         await fetch(
           `/api/canonical-individuals/review-queue?status=${nextStatus}&limit=50`,
           {
-            headers: {
-              "x-atlas-internal-key":
-                key,
-            },
             cache: "no-store",
           },
         );
@@ -298,8 +321,6 @@ export function ReviewQueueClient() {
           {
             method: "POST",
             headers: {
-              "x-atlas-internal-key":
-                apiKey.trim(),
               "Content-Type":
                 "application/json",
             },
@@ -364,14 +385,14 @@ export function ReviewQueueClient() {
             className="rounded-2xl border border-slate-700/80 bg-slate-950/45 p-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void loadReviews();
+              void authenticateAndLoad();
             }}
           >
             <label
               htmlFor="atlas-key"
               className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400"
             >
-              Chave interna da sessão
+              Credencial institucional
             </label>
 
             <div className="mt-3 flex gap-2">
@@ -387,7 +408,7 @@ export function ReviewQueueClient() {
                 }
                 autoComplete="off"
                 className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
-                placeholder="Informe a chave interna"
+                placeholder="Informe sua credencial"
               />
 
               <button
@@ -402,7 +423,7 @@ export function ReviewQueueClient() {
             </div>
 
             <p className="mt-2 text-[11px] leading-5 text-slate-500">
-              Mantida somente na memória desta página e descartada ao fechar ou atualizar.
+              A credencial é trocada por uma sessão segura e não permanece disponível ao navegador.
             </p>
           </form>
         </div>
@@ -514,7 +535,7 @@ export function ReviewQueueClient() {
             </h4>
 
             <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Informe a chave interna para consultar a fila. Nenhum dado é carregado antes da autorização.
+              Autentique-se para consultar a fila. Nenhum dado é carregado antes da autorização.
             </p>
           </div>
         ) : items.length === 0 ? (
@@ -661,7 +682,6 @@ export function ReviewQueueClient() {
 
       {comparisonReview && (
         <ReviewComparisonPanel
-          apiKey={apiKey.trim()}
           review={comparisonReview}
           onClose={() =>
             setComparisonReview(
