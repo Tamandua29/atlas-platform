@@ -125,3 +125,52 @@ export async function listAllAirtableRecords<RecordFields>(
 
   return records;
 }
+
+export async function createAirtableRecord<RecordFields>(
+  tableId: string,
+  fields: RecordFields,
+): Promise<AirtableRecord<RecordFields>> {
+  const configuration =
+    getAirtableConfiguration();
+
+  const endpoint =
+    `${AIRTABLE_API_URL}/` +
+    `${configuration.baseId}/` +
+    tableId;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization:
+        `Bearer ${configuration.accessToken}`,
+      Accept: "application/json",
+      "Content-Type":
+        "application/json",
+    },
+    body: JSON.stringify({
+      records: [{ fields }],
+      typecast: false,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Falha ao criar registro no Airtable: ${response.status} ${await response.text()}`,
+    );
+  }
+
+  const payload = await response.json() as {
+    records: AirtableRecord<RecordFields>[];
+  };
+
+  const record = payload.records[0];
+
+  if (!record) {
+    throw new Error(
+      "O Airtable não retornou o registro criado.",
+    );
+  }
+
+  return record;
+}
