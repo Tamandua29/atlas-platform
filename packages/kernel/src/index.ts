@@ -85,3 +85,17 @@ export {
 export type {
   CanonicalIndividualInput,
 } from "./individuals/canonical-individual";
+
+
+export type {
+  CanonicalIndividualRepository,
+} from "./individuals/canonical-individual-repository";
+
+export {
+  RegisterCanonicalIndividual,
+} from "./individuals/register-canonical-individual";
+
+export type {
+  RegisterCanonicalIndividualInput,
+  RegisterCanonicalIndividualOutput,
+} from "./individuals/register-canonical-individual";
