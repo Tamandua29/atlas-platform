@@ -55,7 +55,6 @@ type ReviewSummary = {
 };
 
 type Props = {
-  apiKey: string;
   review: ReviewSummary;
   onClose: () => void;
 };
@@ -130,7 +129,6 @@ function displayValue(
 }
 
 export function ReviewComparisonPanel({
-  apiKey,
   review,
   onClose,
 }: Props) {
@@ -161,10 +159,6 @@ export function ReviewComparisonPanel({
           await fetch(
             `/api/canonical-individuals/review-queue/${review.recordId}/comparison`,
             {
-              headers: {
-                "x-atlas-internal-key":
-                  apiKey,
-              },
               cache:
                 "no-store",
             },
@@ -216,7 +210,6 @@ export function ReviewComparisonPanel({
       cancelled = true;
     };
   }, [
-    apiKey,
     review.recordId,
   ]);
 
