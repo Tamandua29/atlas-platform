@@ -5,12 +5,22 @@ import {
   normalizeSearchText,
 } from "../normalization/text-normalization";
 import { SourceRecordReference } from "../provenance/source-record-reference";
+import {
+  buildIndividualMatchKey,
+  isStructurallyValidCpf,
+  normalizeCpf,
+  normalizeIdentityDocument,
+  type IndividualMatchKey,
+} from "./individual-identifiers";
 
 export type CanonicalIndividualInput = {
   readonly id?: UniqueEntityId;
   readonly legalName: string;
   readonly aliases?: readonly string[];
   readonly birthDate?: Date;
+  readonly cpf?: string;
+  readonly identityDocument?: string;
+  readonly motherName?: string;
   readonly source: SourceRecordReference;
   readonly createdAt?: Date;
 };
@@ -22,6 +32,12 @@ export class CanonicalIndividual {
   readonly aliases: readonly string[];
   readonly normalizedAliases: readonly string[];
   readonly birthDate?: Date;
+  readonly cpf?: string;
+  readonly cpfStructurallyValid: boolean;
+  readonly identityDocument?: string;
+  readonly motherName?: string;
+  readonly normalizedMotherName?: string;
+  readonly matchKey: IndividualMatchKey | null;
   readonly sources: readonly SourceRecordReference[];
   readonly createdAt: Date;
 
@@ -73,6 +89,47 @@ export class CanonicalIndividual {
             input.birthDate.getTime(),
           )
         : undefined;
+
+    this.cpf = normalizeCpf(
+      input.cpf,
+    );
+
+    this.cpfStructurallyValid =
+      this.cpf
+        ? isStructurallyValidCpf(
+            this.cpf,
+          )
+        : false;
+
+    this.identityDocument =
+      normalizeIdentityDocument(
+        input.identityDocument,
+      );
+
+    this.motherName =
+      input.motherName
+        ? collapseWhitespace(
+            input.motherName,
+          ) || undefined
+        : undefined;
+
+    this.normalizedMotherName =
+      this.motherName
+        ? normalizeSearchText(
+            this.motherName,
+          )
+        : undefined;
+
+    this.matchKey =
+      buildIndividualMatchKey({
+        cpf: this.cpf,
+        normalizedName:
+          this.normalizedName,
+        birthDate:
+          this.birthDate,
+        normalizedMotherName:
+          this.normalizedMotherName,
+      });
 
     this.sources = Object.freeze([
       input.source,
