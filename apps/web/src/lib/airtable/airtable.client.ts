@@ -174,3 +174,58 @@ export async function createAirtableRecord<RecordFields>(
 
   return record;
 }
+
+export async function updateAirtableRecord<RecordFields>(
+  tableId: string,
+  recordId: string,
+  fields: Partial<RecordFields>,
+): Promise<AirtableRecord<RecordFields>> {
+  const configuration =
+    getAirtableConfiguration();
+
+  const endpoint =
+    `${AIRTABLE_API_URL}/` +
+    `${configuration.baseId}/` +
+    tableId;
+
+  const response = await fetch(endpoint, {
+    method: "PATCH",
+    headers: {
+      Authorization:
+        `Bearer ${configuration.accessToken}`,
+      Accept: "application/json",
+      "Content-Type":
+        "application/json",
+    },
+    body: JSON.stringify({
+      records: [
+        {
+          id: recordId,
+          fields,
+        },
+      ],
+      typecast: false,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Falha ao atualizar registro no Airtable: ${response.status} ${await response.text()}`,
+    );
+  }
+
+  const payload = await response.json() as {
+    records: AirtableRecord<RecordFields>[];
+  };
+
+  const record = payload.records[0];
+
+  if (!record) {
+    throw new Error(
+      "O Airtable não retornou o registro atualizado.",
+    );
+  }
+
+  return record;
+}
