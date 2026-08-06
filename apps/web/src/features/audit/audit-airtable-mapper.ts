@@ -68,7 +68,10 @@ export function mapAuditEntryToAirtable(
           "Campo Afetado":
             "Decisão Humana",
           "Valor Anterior":
-            "Pendente",
+            metadataString(
+              entry,
+              "previousValue",
+            ),
           "Valor Novo":
             metadataString(
               entry,
