@@ -8,6 +8,9 @@ export type RegisterCanonicalIndividualInput = {
   readonly legalName: string;
   readonly aliases?: readonly string[];
   readonly birthDate?: string;
+  readonly cpf?: string;
+  readonly identityDocument?: string;
+  readonly motherName?: string;
   readonly source: {
     readonly system: "airtable";
     readonly baseId: string;
@@ -103,6 +106,11 @@ export class RegisterCanonicalIndividual {
         birthDate: parseBirthDate(
           input.birthDate,
         ),
+        cpf: input.cpf,
+        identityDocument:
+          input.identityDocument,
+        motherName:
+          input.motherName,
         source,
         createdAt: timestamp,
       });
