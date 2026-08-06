@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { OperationalMap } from "@/components/map/operational-map";
 
 const navigation = [
@@ -185,12 +187,12 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <button
+                  <Link
+                    href="/identification-dashboard"
                     className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-                    type="button"
                   >
-                    Nova análise
-                  </button>
+                    Painel de identificação
+                  </Link>
 
                   <button
                     className="rounded-xl border border-slate-700 bg-slate-900/70 px-5 py-3 text-sm font-semibold text-white transition hover:border-slate-600"
