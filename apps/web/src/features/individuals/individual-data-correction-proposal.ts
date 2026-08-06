@@ -32,6 +32,9 @@ type ProposalReviewFields = {
   "Proponente Técnico"?: string;
   "Proposta em"?: string;
   "Hash da Versão de Origem"?: string;
+  "Aprovador Técnico"?: string;
+  "Justificativa da Decisão da Proposta"?: string;
+  "Proposta Decidida em"?: string;
 };
 
 type IndividualFields = {
@@ -51,6 +54,9 @@ export type ProtectedCorrectionProposalContext = {
   proposed: ProposalValues | null;
   proposedAt: string | null;
   proposerId: string | null;
+  approverId: string | null;
+  decisionReason: string | null;
+  decidedAt: string | null;
 };
 
 function maskDocument(value: string | undefined): string {
@@ -165,6 +171,9 @@ async function loadContext(reviewId: string) {
         "Proponente Técnico",
         "Proposta em",
         "Hash da Versão de Origem",
+        "Aprovador Técnico",
+        "Justificativa da Decisão da Proposta",
+        "Proposta Decidida em",
       ],
       filterByFormula: `{ID Revisão}='${reviewId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
@@ -225,7 +234,52 @@ export async function getProtectedCorrectionProposalContext(
     proposed,
     proposedAt: context.review.fields["Proposta em"] ?? null,
     proposerId: context.review.fields["Proponente Técnico"]?.trim() || null,
+    approverId: context.review.fields["Aprovador Técnico"]?.trim() || null,
+    decisionReason:
+      context.review.fields["Justificativa da Decisão da Proposta"]?.trim() || null,
+    decidedAt: context.review.fields["Proposta Decidida em"] ?? null,
   };
+}
+
+export async function decideCorrectionProposal(input: {
+  reviewId: string;
+  decision: "approve" | "reject";
+  reason: string;
+  approverId: string;
+  decidedAt: Date;
+}): Promise<ProtectedCorrectionProposalContext> {
+  const context = await loadContext(input.reviewId);
+  const proposalStatus = context.review.fields["Situação da Proposta"];
+  const proposerId = context.review.fields["Proponente Técnico"]?.trim();
+
+  if (proposalStatus !== "Pendente de aprovação") {
+    throw new Error("Somente propostas pendentes podem receber uma decisão.");
+  }
+  if (!proposerId) {
+    throw new Error("A proposta não possui proponente identificado.");
+  }
+  if (proposerId === input.approverId) {
+    throw new Error("A mesma identidade não pode elaborar e decidir a proposta.");
+  }
+
+  const reason = input.reason.trim();
+  if (reason.length < 10 || reason.length > 1000) {
+    throw new Error("A justificativa da decisão deve possuir entre 10 e 1000 caracteres.");
+  }
+
+  await updateAirtableRecord<ProposalReviewFields>(
+    REVIEW_TABLE_ID,
+    context.review.id,
+    {
+      "Situação da Proposta": input.decision === "approve" ? "Aprovada" : "Rejeitada",
+      "Aprovador Técnico": input.approverId,
+      "Justificativa da Decisão da Proposta": reason,
+      "Proposta Decidida em": input.decidedAt.toISOString(),
+    },
+    { baseId: context.configuration.individualsPreviewBaseId },
+  );
+
+  return getProtectedCorrectionProposalContext(input.reviewId);
 }
 
 export async function saveCorrectionProposal(input: {
