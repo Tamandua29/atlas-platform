@@ -123,10 +123,12 @@ export {
 } from "./individuals/duplicate-review-item";
 
 export type {
+  DecideDuplicateReviewInput,
   DuplicateReviewConfidence,
   DuplicateReviewDecision,
   DuplicateReviewItemInput,
   DuplicateReviewStrategy,
+  FinalDuplicateReviewDecision,
 } from "./individuals/duplicate-review-item";
 
 export { AuditEntry } from "./audit/audit-entry";
