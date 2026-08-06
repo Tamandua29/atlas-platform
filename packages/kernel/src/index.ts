@@ -86,7 +86,6 @@ export type {
   CanonicalIndividualInput,
 } from "./individuals/canonical-individual";
 
-
 export type {
   CanonicalIndividualRepository,
 } from "./individuals/canonical-individual-repository";
@@ -100,7 +99,6 @@ export type {
   RegisterCanonicalIndividualOutput,
 } from "./individuals/register-canonical-individual";
 
-
 export {
   buildIndividualMatchKey,
   isStructurallyValidCpf,
@@ -112,7 +110,6 @@ export type {
   IndividualMatchKey,
 } from "./individuals/individual-identifiers";
 
-
 export {
   findDuplicateCandidates,
 } from "./individuals/find-duplicate-candidates";
@@ -121,6 +118,16 @@ export type {
   DuplicateCandidate,
 } from "./individuals/find-duplicate-candidates";
 
+export {
+  DuplicateReviewItem,
+} from "./individuals/duplicate-review-item";
+
+export type {
+  DuplicateReviewConfidence,
+  DuplicateReviewDecision,
+  DuplicateReviewItemInput,
+  DuplicateReviewStrategy,
+} from "./individuals/duplicate-review-item";
 
 export { AuditEntry } from "./audit/audit-entry";
 export type { AuditEntryInput, AuditOutcome } from "./audit/audit-entry";
