@@ -20,7 +20,7 @@ type ProposalKey =
   | "cpf"
   | "identityDocument";
 
-type ProposalValues = Partial<Record<ProposalKey, string>>;
+export type ProposalValues = Partial<Record<ProposalKey, string>>;
 
 type ProposalReviewFields = {
   "ID Revisão"?: string;
