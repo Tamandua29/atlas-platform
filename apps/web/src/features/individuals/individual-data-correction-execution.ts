@@ -1,6 +1,6 @@
 import "server-only";
 
-import { normalizeCpf } from "@atlas/kernel";
+import { isStructurallyValidCpf, normalizeCpf } from "@atlas/kernel";
 
 import {
   listAllAirtableRecords,
@@ -35,6 +35,7 @@ type ExecutionReviewFields = {
   "Hash Após Aplicação"?: string;
   "Nota da Execução"?: string;
   "Erro da Execução"?: string;
+  "Campos para Saneamento"?: string;
 };
 
 type IndividualFields = {
@@ -75,26 +76,57 @@ async function hashFields(fields: IndividualFields): Promise<string> {
     .join("");
 }
 
-function parseProposal(raw: string | undefined): ProposalValues {
+function allowedProposalKeys(issues: string[]): ProposalKey[] {
+  const allowed = new Set<ProposalKey>();
+  for (const issue of issues) {
+    if (issue === "Nome completo ausente") allowed.add("legalName");
+    if (issue === "Data de nascimento ausente") allowed.add("birthDate");
+    if (issue === "Filiação materna ausente") allowed.add("motherName");
+    if (issue === "CPF ausente" || issue === "CPF estruturalmente inválido") allowed.add("cpf");
+    if (issue === "RG ausente") allowed.add("identityDocument");
+  }
+  return Array.from(allowed);
+}
+
+function validIsoDate(value: string): boolean {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function parseProposal(raw: string | undefined, issues: string[]): ProposalValues {
   if (!raw) throw new Error("A proposta aprovada não possui valores estruturados.");
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("A proposta aprovada possui formato inválido.");
   }
 
-  const allowed: ProposalKey[] = [
-    "legalName",
-    "birthDate",
-    "motherName",
-    "cpf",
-    "identityDocument",
-  ];
+  const allowed = allowedProposalKeys(issues);
   const result: ProposalValues = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (!allowed.includes(key as ProposalKey) || typeof value !== "string" || !value.trim()) {
       throw new Error("A proposta aprovada contém campo ou valor inválido.");
     }
-    result[key as ProposalKey] = value.trim();
+    const proposalKey = key as ProposalKey;
+    const normalized = value.trim();
+    if ((proposalKey === "legalName" || proposalKey === "motherName") && normalized.length < 3) {
+      throw new Error("A proposta aprovada contém nome ou filiação inválida.");
+    }
+    if (proposalKey === "birthDate" && !validIsoDate(normalized)) {
+      throw new Error("A proposta aprovada contém data de nascimento inválida.");
+    }
+    if (proposalKey === "cpf") {
+      const cpf = normalizeCpf(normalized);
+      if (!cpf || !isStructurallyValidCpf(cpf)) {
+        throw new Error("A proposta aprovada contém CPF estruturalmente inválido.");
+      }
+      result.cpf = cpf;
+      continue;
+    }
+    if (proposalKey === "identityDocument" && (normalized.length < 3 || normalized.length > 30)) {
+      throw new Error("A proposta aprovada contém documento de identidade inválido.");
+    }
+    result[proposalKey] = normalized;
   }
   if (Object.keys(result).length === 0) throw new Error("A proposta aprovada está vazia.");
   return result;
@@ -145,6 +177,7 @@ async function loadExecutionContext(reviewId: string) {
         "Hash Após Aplicação",
         "Nota da Execução",
         "Erro da Execução",
+        "Campos para Saneamento",
       ],
       filterByFormula: `{ID Revisão}='${reviewId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
@@ -241,7 +274,11 @@ export async function executeApprovedCorrection(input: {
     throw new Error("Somente propostas aprovadas podem ser executadas.");
   }
 
-  const proposal = parseProposal(fields["Proposta de Correção"]);
+  const issues = fields["Campos para Saneamento"]
+    ?.split(/\\r?\\n/)
+    .map((value) => value.trim())
+    .filter(Boolean) ?? [];
+  const proposal = parseProposal(fields["Proposta de Correção"], issues);
   const currentHash = await hashFields(context.individual.fields);
   const expectedSourceHash = fields["Hash da Versão de Origem"];
   const expectedAfterHash = fields["Hash Após Aplicação"];
