@@ -180,13 +180,14 @@ export async function updateAirtableRecord<RecordFields>(
   tableId: string,
   recordId: string,
   fields: Partial<RecordFields>,
+  options: { baseId?: string } = {},
 ): Promise<AirtableRecord<RecordFields>> {
   const configuration =
     getAirtableConfiguration();
 
   const endpoint =
     `${AIRTABLE_API_URL}/` +
-    `${configuration.baseId}/` +
+    `${options.baseId ?? configuration.baseId}/` +
     tableId;
 
   const response = await fetch(endpoint, {
