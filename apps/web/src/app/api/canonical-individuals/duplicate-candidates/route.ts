@@ -2,6 +2,7 @@ import { AuditEntry } from "@atlas/kernel";
 
 import { NextResponse } from "next/server";
 
+import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { previewDuplicateCandidatesFromAirtable } from "@/features/individuals/duplicate-candidates-preview";
 
 export const dynamic =
@@ -23,8 +24,14 @@ export async function GET() {
       },
     });
 
+    const auditPersisted =
+      await persistAuditSafely(
+        audit,
+      );
+
     return NextResponse.json({
       success: true,
+      auditPersisted,
       correlationId:
         audit.correlationId,
       mode:
@@ -51,9 +58,15 @@ export async function GET() {
       },
     });
 
+    const auditPersisted =
+      await persistAuditSafely(
+        audit,
+      );
+
     return NextResponse.json(
       {
         success: false,
+        auditPersisted,
         correlationId:
           audit.correlationId,
         mode:
