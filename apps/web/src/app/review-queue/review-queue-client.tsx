@@ -8,6 +8,11 @@ import {
 
 import { ReviewComparisonPanel } from "./review-comparison-panel";
 
+type SessionActor = {
+  id: string;
+  role: "reviewer" | "auditor" | "administrator";
+};
+
 type ReviewStatus =
   | "open"
   | "completed"
@@ -129,6 +134,8 @@ export function ReviewQueueClient() {
     connected,
     setConnected,
   ] = useState(false);
+  const [actor, setActor] =
+    useState<SessionActor | null>(null);
   const [status, setStatus] =
     useState<ReviewStatus>(
       "open",
@@ -202,9 +209,11 @@ export function ReviewQueueClient() {
 
         const payload = (await response.json()) as {
           authenticated?: boolean;
+          actor?: SessionActor;
         };
 
-        if (payload.authenticated && !cancelled) {
+        if (payload.authenticated && payload.actor && !cancelled) {
+          setActor(payload.actor);
           setConnected(true);
           await loadReviews("open");
         }
@@ -239,19 +248,42 @@ export function ReviewQueueClient() {
       });
       const payload = (await response.json()) as {
         authenticated?: boolean;
+        actor?: SessionActor;
         message?: string;
       };
-      if (!response.ok || !payload.authenticated) {
+      if (!response.ok || !payload.authenticated || !payload.actor) {
         throw new Error(payload.message ?? "Não foi possível iniciar a sessão.");
       }
+      setActor(payload.actor);
       setConnected(true);
       setApiKey("");
       await loadReviews(status);
     } catch (caught) {
+      setActor(null);
       setConnected(false);
       setItems([]);
       setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
     } finally {
+      setLoading(false);
+    }
+  }
+
+  async function endSession() {
+    setLoading(true);
+    setError("");
+
+    try {
+      await fetch("/api/auth/session", {
+        method: "DELETE",
+      });
+    } finally {
+      setActor(null);
+      setConnected(false);
+      setItems([]);
+      setSelected(null);
+      setComparisonReview(null);
+      setAuditPersisted(null);
+      setApiKey("");
       setLoading(false);
     }
   }
@@ -415,6 +447,31 @@ export function ReviewQueueClient() {
             </p>
           </div>
 
+          {connected && actor ? (
+            <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/45 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">
+                Sessão autenticada
+              </p>
+              <p className="mt-3 text-sm font-semibold text-white">
+                {actor.id}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Perfil: {actor.role === "administrator"
+                  ? "Administrador"
+                  : actor.role === "auditor"
+                    ? "Auditor — somente leitura"
+                    : "Revisor"}
+              </p>
+              <button
+                type="button"
+                onClick={() => void endSession()}
+                disabled={loading}
+                className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-2.5 text-sm font-semibold text-rose-200 transition hover:bg-rose-400/15 disabled:opacity-60"
+              >
+                Encerrar sessão
+              </button>
+            </div>
+          ) : (
           <form
             className="rounded-2xl border border-slate-700/80 bg-slate-950/45 p-4"
             onSubmit={(event) => {
@@ -460,6 +517,7 @@ export function ReviewQueueClient() {
               A credencial é trocada por uma sessão segura e não permanece disponível ao navegador.
             </p>
           </form>
+          )}
         </div>
       </section>
 
@@ -693,7 +751,9 @@ export function ReviewQueueClient() {
                     </button>
 
                     {item.status ===
-                      "open" && (
+                      "open" &&
+                      actor?.role !==
+                        "auditor" && (
                       <button
                         type="button"
                         onClick={() =>
