@@ -111,3 +111,12 @@ export {
 export type {
   IndividualMatchKey,
 } from "./individuals/individual-identifiers";
+
+
+export {
+  findDuplicateCandidates,
+} from "./individuals/find-duplicate-candidates";
+
+export type {
+  DuplicateCandidate,
+} from "./individuals/find-duplicate-candidates";
