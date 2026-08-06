@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-export type AtlasRole = "reviewer" | "administrator";
+export type AtlasRole = "reviewer" | "auditor" | "administrator";
 
 export type AtlasSession = {
   actorId: string;
@@ -56,9 +56,13 @@ async function sign(payload: string, secret: string): Promise<string> {
 }
 
 function configuredRole(): AtlasRole {
-  return process.env.ATLAS_REVIEWER_ROLE?.trim() === "administrator"
-    ? "administrator"
-    : "reviewer";
+  const configured = process.env.ATLAS_REVIEWER_ROLE?.trim();
+
+  if (configured === "administrator" || configured === "auditor") {
+    return configured;
+  }
+
+  return "reviewer";
 }
 
 export function configuredActorId(): string {
@@ -120,7 +124,11 @@ export async function readAtlasSession(): Promise<AtlasSession | null> {
     ) as AtlasSession;
     if (
       typeof session.actorId !== "string"
-      || (session.role !== "reviewer" && session.role !== "administrator")
+      || (
+        session.role !== "reviewer"
+        && session.role !== "auditor"
+        && session.role !== "administrator"
+      )
       || typeof session.expiresAt !== "number"
       || session.expiresAt <= Math.floor(Date.now() / 1000)
     ) return null;
