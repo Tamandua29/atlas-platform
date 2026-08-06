@@ -358,7 +358,8 @@ export async function getProtectedDuplicateReviewComparison(
           (field) =>
             field.CPF,
         ),
-        normalizeCpf,
+        (value) =>
+          normalizeCpf(value) ?? "",
       ),
       identityDocument:
         compareValues(
@@ -368,7 +369,10 @@ export async function getProtectedDuplicateReviewComparison(
                 "Registro Geral"
               ],
           ),
-          normalizeIdentityDocument,
+          (value) =>
+            normalizeIdentityDocument(
+              value,
+            ) ?? "",
         ),
     },
   };
