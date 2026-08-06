@@ -14,6 +14,18 @@ type QualityItem = {
   fieldsExpected: number;
 };
 
+type ProtectedDetail = {
+  queueId: string;
+  priority: Exclude<Priority, "all">;
+  issues: string[];
+  legalName: string | null;
+  birthDate: string | null;
+  motherName: string | null;
+  maskedCpf: string | null;
+  cpfStructurallyValid: boolean;
+  maskedIdentityDocument: string | null;
+};
+
 type Payload = {
   success?: boolean;
   auditPersisted?: boolean;
@@ -46,6 +58,8 @@ export function QualityQueueClient() {
   const [auditPersisted, setAuditPersisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [detail, setDetail] = useState<ProtectedDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   async function load(nextPriority: Priority) {
     setLoading(true);
@@ -68,6 +82,33 @@ export function QualityQueueClient() {
       setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function openDetail(item: QualityItem) {
+    setDetailLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `/api/data-quality/individuals/queue/${item.queueId}`,
+        { cache: "no-store" },
+      );
+      const payload = (await response.json()) as {
+        success?: boolean;
+        detail?: ProtectedDetail;
+        message?: string;
+      };
+
+      if (!response.ok || !payload.success || !payload.detail) {
+        throw new Error(payload.message ?? "Não foi possível abrir a conferência.");
+      }
+
+      setDetail(payload.detail);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+    } finally {
+      setDetailLoading(false);
     }
   }
 
@@ -167,12 +208,69 @@ export function QualityQueueClient() {
                       ))}
                     </ul>
                   </div>
+
+                  <div className="mt-5 flex justify-end border-t border-slate-800 pt-4">
+                    <button
+                      type="button"
+                      disabled={detailLoading}
+                      onClick={() => void openDetail(item)}
+                      className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/15 disabled:opacity-60"
+                    >
+                      Abrir conferência
+                    </button>
+                  </div>
                 </article>
               );
             })}
           </div>
         )}
       </section>
+
+      {detail && (
+        <section className="mt-6 overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#0a1020]">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-400">
+                Conferência protegida
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-white">
+                Valores atuais do cadastro
+              </h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Acesso temporário e auditado. Documentos permanecem mascarados.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDetail(null)}
+              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:text-white"
+            >
+              Fechar
+            </button>
+          </div>
+
+          <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+            {[
+              ["Nome completo", detail.legalName],
+              ["Data de nascimento", detail.birthDate],
+              ["Filiação materna", detail.motherName],
+              ["CPF mascarado", detail.maskedCpf],
+              ["RG mascarado", detail.maskedIdentityDocument],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-slate-800 bg-slate-950/45 p-4">
+                <p className="text-xs text-slate-600">{label}</p>
+                <p className={`mt-2 text-sm ${value ? "text-white" : "text-amber-300"}`}>
+                  {value || "Não informado"}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mx-5 mb-5 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-xs leading-5 text-amber-100/75">
+            Esta visualização serve somente à conferência humana. Nenhum valor pode ser alterado nesta tela e nenhuma escrita foi executada.
+          </div>
+        </section>
+      )}
     </div>
   );
 }
