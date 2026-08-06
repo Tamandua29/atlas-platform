@@ -24,10 +24,10 @@ export default function ReviewQueuePage() {
           </div>
 
           <Link
-            href="/"
+            href="/identification-dashboard"
             className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-slate-600 hover:text-white"
           >
-            Voltar à visão geral
+            Painel de identificação
           </Link>
         </div>
       </header>
