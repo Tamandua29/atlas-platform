@@ -179,6 +179,23 @@ export async function listSafeIndividualQualityQueue(): Promise<SafeQualityQueue
   });
 }
 
+export async function resolveIndividualQualityCorrectionTarget(
+  queueId: string,
+): Promise<{ sourceRecordId: string; issues: string[] } | null> {
+  const records = await loadRecords();
+
+  for (const record of records) {
+    if (await queueIdFor(record.id) !== queueId) continue;
+    const analysis = analyze(record.fields);
+
+    return analysis
+      ? { sourceRecordId: record.id, issues: analysis.issues }
+      : null;
+  }
+
+  return null;
+}
+
 export async function getProtectedIndividualQualityDetail(
   queueId: string,
 ): Promise<ProtectedQualityDetail | null> {
