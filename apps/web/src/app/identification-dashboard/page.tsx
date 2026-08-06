@@ -21,6 +21,9 @@ export default function IdentificationDashboardPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href="/data-quality" className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-400/15">
+              Qualidade dos dados
+            </Link>
             <Link href="/review-queue" className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-300">
               Fila de revisão
             </Link>
