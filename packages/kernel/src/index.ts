@@ -62,3 +62,26 @@ export type {
   QueryBus,
   QueryHandler,
 } from "./queries/query";
+
+export {
+  collapseWhitespace,
+  normalizeDigits,
+  normalizeSearchText,
+} from "./normalization/text-normalization";
+
+export {
+  SourceRecordReference,
+} from "./provenance/source-record-reference";
+
+export type {
+  SourceRecordReferenceInput,
+  SourceSystem,
+} from "./provenance/source-record-reference";
+
+export {
+  CanonicalIndividual,
+} from "./individuals/canonical-individual";
+
+export type {
+  CanonicalIndividualInput,
+} from "./individuals/canonical-individual";
