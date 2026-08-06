@@ -60,6 +60,10 @@ export function QualityQueueClient() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<ProtectedDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [actorRole, setActorRole] = useState<"reviewer" | "auditor" | "administrator" | null>(null);
+  const [justification, setJustification] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const [requestResult, setRequestResult] = useState("");
 
   async function load(nextPriority: Priority) {
     setLoading(true);
@@ -105,10 +109,57 @@ export function QualityQueueClient() {
       }
 
       setDetail(payload.detail);
+      setJustification("");
+      setRequestResult("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  async function requestCorrection() {
+    if (!detail) return;
+
+    if (justification.trim().length < 10) {
+      setError("A justificativa deve possuir ao menos 10 caracteres.");
+      return;
+    }
+
+    setRequesting(true);
+    setError("");
+    setRequestResult("");
+
+    try {
+      const response = await fetch(
+        `/api/data-quality/individuals/queue/${detail.queueId}/request-correction`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ justification: justification.trim() }),
+        },
+      );
+      const payload = (await response.json()) as {
+        success?: boolean;
+        requestCreated?: boolean;
+        reviewId?: string;
+        message?: string;
+      };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message ?? "Não foi possível registrar a solicitação.");
+      }
+
+      setRequestResult(
+        payload.requestCreated
+          ? `Solicitação ${payload.reviewId} registrada com sucesso.`
+          : `A solicitação ${payload.reviewId} já estava aberta; nenhuma duplicata foi criada.`,
+      );
+      setJustification("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+    } finally {
+      setRequesting(false);
     }
   }
 
@@ -267,8 +318,45 @@ export function QualityQueueClient() {
           </div>
 
           <div className="mx-5 mb-5 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-xs leading-5 text-amber-100/75">
-            Esta visualização serve somente à conferência humana. Nenhum valor pode ser alterado nesta tela e nenhuma escrita foi executada.
+            Esta visualização serve somente à conferência humana. Nenhum valor do cadastro pode ser alterado nesta tela.
           </div>
+
+          {actorRole === "auditor" ? (
+            <div className="mx-5 mb-5 rounded-xl border border-slate-700 bg-slate-950/45 p-4 text-sm text-slate-400">
+              Perfil Auditor: consulta permitida, abertura de solicitação bloqueada.
+            </div>
+          ) : (
+            <div className="mx-5 mb-5 rounded-xl border border-cyan-400/20 bg-slate-950/45 p-5">
+              <label htmlFor="correction-justification" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Justificativa da solicitação
+              </label>
+              <textarea
+                id="correction-justification"
+                rows={3}
+                maxLength={500}
+                value={justification}
+                onChange={(event) => setJustification(event.target.value)}
+                placeholder="Descreva a necessidade de conferência sem inserir dados pessoais desnecessários."
+                className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              />
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  disabled={requesting}
+                  onClick={() => void requestCorrection()}
+                  className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-60"
+                >
+                  {requesting ? "Registrando..." : "Solicitar correção"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {requestResult && (
+            <div className="mx-5 mb-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-200">
+              {requestResult} Nenhum campo do cadastro de origem foi alterado.
+            </div>
+          )}
         </section>
       )}
     </div>
