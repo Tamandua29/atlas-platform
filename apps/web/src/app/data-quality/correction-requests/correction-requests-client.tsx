@@ -16,6 +16,8 @@ type CorrectionItem = {
   assigneeId: string | null;
   treatmentNote: string | null;
   updatedAt: string | null;
+  proposalStatus: string | null;
+  proposedAt: string | null;
 };
 
 const filters: Array<{ value: Status; label: string }> = [
@@ -229,7 +231,21 @@ export function CorrectionRequestsClient() {
                   />
                 )}
 
+                {item.proposalStatus && (
+                  <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-xs text-cyan-200">
+                    Proposta: {item.proposalStatus}
+                  </div>
+                )}
+
                 <div className="mt-5 flex justify-end gap-3 border-t border-slate-800 pt-4">
+                  {item.status === "completed" && (
+                    <Link
+                      href={`/data-quality/correction-requests/${item.reviewId}/proposal`}
+                      className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200"
+                    >
+                      {item.proposalStatus ? "Visualizar proposta" : "Elaborar proposta"}
+                    </Link>
+                  )}
                   {item.status === "open" && canWrite && (
                     <button
                       type="button"
