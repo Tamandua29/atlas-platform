@@ -14,6 +14,9 @@ type AirtableIndividualFields = {
   "Nome Completo"?: string;
   "Vulgo Principal"?: string;
   "Data de Nascimento"?: string;
+  CPF?: string;
+  "Registro Geral"?: string;
+  Mãe?: string;
   "Base de Origem"?: string;
   "ID na Base de Origem"?: string;
 };
@@ -57,6 +60,15 @@ export type CanonicalIndividualPreview = {
   readonly aliases: readonly string[];
   readonly normalizedAliases: readonly string[];
   readonly birthDate: string | null;
+  readonly cpf: string | null;
+  readonly cpfStructurallyValid: boolean;
+  readonly identityDocument: string | null;
+  readonly motherName: string | null;
+  readonly normalizedMotherName: string | null;
+  readonly matchKey: {
+    readonly strategy: "cpf" | "biographic";
+    readonly value: string;
+  } | null;
   readonly created: boolean;
 };
 
@@ -77,6 +89,9 @@ export async function previewCanonicalIndividualsFromAirtable(
           "Nome Completo",
           "Vulgo Principal",
           "Data de Nascimento",
+          "CPF",
+          "Registro Geral",
+          "Mãe",
         ],
         maxRecords: Math.min(
           Math.max(limit, 1),
@@ -126,6 +141,13 @@ export async function previewCanonicalIndividualsFromAirtable(
           record.fields[
             "Data de Nascimento"
           ],
+        cpf: record.fields.CPF,
+        identityDocument:
+          record.fields[
+            "Registro Geral"
+          ],
+        motherName:
+          record.fields.Mãe,
         source: {
           system: "airtable",
           baseId:
@@ -162,6 +184,22 @@ export async function previewCanonicalIndividualsFromAirtable(
           .birthDate
           ?.toISOString()
           .slice(0, 10) ?? null,
+      cpf:
+        result.individual.cpf ?? null,
+      cpfStructurallyValid:
+        result.individual
+          .cpfStructurallyValid,
+      identityDocument:
+        result.individual
+          .identityDocument ?? null,
+      motherName:
+        result.individual
+          .motherName ?? null,
+      normalizedMotherName:
+        result.individual
+          .normalizedMotherName ?? null,
+      matchKey:
+        result.individual.matchKey,
       created: result.created,
     });
   }
