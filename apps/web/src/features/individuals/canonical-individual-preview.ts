@@ -70,12 +70,13 @@ export async function previewCanonicalIndividualsFromAirtable(
     await listAllAirtableRecords<AirtableIndividualFields>(
       configuration.individualsTableId,
       {
+        baseId:
+          configuration
+            .individualsPreviewBaseId,
         fields: [
           "Nome Completo",
           "Vulgo Principal",
           "Data de Nascimento",
-          "Base de Origem",
-          "ID na Base de Origem",
         ],
         maxRecords: Math.min(
           Math.max(limit, 1),
@@ -128,7 +129,8 @@ export async function previewCanonicalIndividualsFromAirtable(
         source: {
           system: "airtable",
           baseId:
-            configuration.baseId,
+            configuration
+              .individualsPreviewBaseId,
           tableId:
             configuration
               .individualsTableId,
