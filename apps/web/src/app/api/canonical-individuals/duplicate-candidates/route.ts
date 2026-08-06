@@ -1,3 +1,5 @@
+import { AuditEntry } from "@atlas/kernel";
+
 import { NextResponse } from "next/server";
 
 import { previewDuplicateCandidatesFromAirtable } from "@/features/individuals/duplicate-candidates-preview";
@@ -10,8 +12,21 @@ export async function GET() {
     const candidates =
       await previewDuplicateCandidatesFromAirtable();
 
+    const audit = AuditEntry.create({
+      action: "individuals.duplicate-candidates.preview",
+      outcome: "success",
+      occurredAt: new Date(),
+      processedCount: candidates.length,
+      successCount: candidates.length,
+      metadata: {
+        mode: "read-only",
+      },
+    });
+
     return NextResponse.json({
       success: true,
+      correlationId:
+        audit.correlationId,
       mode:
         "read-only-human-review",
       count: candidates.length,
@@ -25,9 +40,22 @@ export async function GET() {
       error,
     );
 
+    const audit = AuditEntry.create({
+      action: "individuals.duplicate-candidates.preview",
+      outcome: "failure",
+      occurredAt: new Date(),
+      processedCount: 0,
+      failureCount: 1,
+      metadata: {
+        mode: "read-only",
+      },
+    });
+
     return NextResponse.json(
       {
         success: false,
+        correlationId:
+          audit.correlationId,
         mode:
           "read-only-human-review",
         count: 0,
