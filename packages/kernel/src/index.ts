@@ -99,3 +99,15 @@ export type {
   RegisterCanonicalIndividualInput,
   RegisterCanonicalIndividualOutput,
 } from "./individuals/register-canonical-individual";
+
+
+export {
+  buildIndividualMatchKey,
+  isStructurallyValidCpf,
+  normalizeCpf,
+  normalizeIdentityDocument,
+} from "./individuals/individual-identifiers";
+
+export type {
+  IndividualMatchKey,
+} from "./individuals/individual-identifiers";
