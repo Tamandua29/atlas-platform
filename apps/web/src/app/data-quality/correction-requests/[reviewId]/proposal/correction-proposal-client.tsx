@@ -18,6 +18,9 @@ type Context = {
   approverId: string | null;
   decisionReason: string | null;
   decidedAt: string | null;
+  executionStatus: string | null;
+  executorId: string | null;
+  executedAt: string | null;
 };
 
 const labels: Record<ProposalKey, string> = {
@@ -43,6 +46,9 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
   const [actorId, setActorId] = useState<string | null>(null);
   const [decisionReason, setDecisionReason] = useState("");
   const [deciding, setDeciding] = useState(false);
+  const [executionNote, setExecutionNote] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [executing, setExecuting] = useState(false);
   const [auditPersisted, setAuditPersisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -150,6 +156,52 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
       setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
     } finally {
       setDeciding(false);
+    }
+  }
+
+  async function executeCorrection() {
+    if (executionNote.trim().length < 10) {
+      setError("A nota da execução deve possuir pelo menos 10 caracteres.");
+      return;
+    }
+    if (confirmation.trim() !== "APLICAR CORREÇÃO") {
+      setError("Digite exatamente APLICAR CORREÇÃO para confirmar.");
+      return;
+    }
+
+    setExecuting(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(
+        `/api/data-quality/correction-requests/${reviewId}/proposal/execute`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            confirmation: confirmation.trim(),
+            note: executionNote.trim(),
+          }),
+        },
+      );
+      const payload = await response.json() as {
+        success?: boolean;
+        sourceWritesPerformed?: number;
+        message?: string;
+      };
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message ?? "Não foi possível executar a correção.");
+      }
+      setExecutionNote("");
+      setConfirmation("");
+      setMessage(
+        `Correção aplicada e auditada. Escritas controladas na origem: ${payload.sourceWritesPerformed ?? 0}.`,
+      );
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+    } finally {
+      setExecuting(false);
     }
   }
 
@@ -285,7 +337,69 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
                 <p className="font-semibold">Decisão: {context.proposalStatus}</p>
                 <p className="mt-2 text-xs text-emerald-100/70">Decisor: {context.approverId ?? "Não identificado"}</p>
                 <p className="mt-2 text-sm">{context.decisionReason ?? "Sem justificativa registrada."}</p>
-                <p className="mt-2 text-xs text-amber-200/80">A decisão não aplicou nenhuma alteração ao cadastro.</p>
+                {context.proposalStatus === "Aprovada" && (
+                  <p className="mt-2 text-xs text-amber-200/80">A aprovação ainda não aplicou nenhuma alteração ao cadastro.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {context.proposalStatus === "Aprovada" && !context.executionStatus && (
+            <div className="border-t border-slate-800 p-5">
+              {actorId === context.proposerId || actorId === context.approverId ? (
+                <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-200">
+                  Terceira identidade obrigatória: proponente e aprovador não podem executar a escrita controlada.
+                </div>
+              ) : canWrite ? (
+                <div className="rounded-2xl border border-rose-400/20 bg-slate-950/45 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-rose-300">Execução controlada na origem</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    O hash da versão será conferido novamente. Somente os campos aprovados serão atualizados e o estado anterior será preservado.
+                  </p>
+                  <textarea
+                    rows={3}
+                    maxLength={1000}
+                    value={executionNote}
+                    onChange={(event) => setExecutionNote(event.target.value)}
+                    placeholder="Registre a justificativa operacional da execução."
+                    className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-rose-400"
+                  />
+                  <label htmlFor="execution-confirmation" className="mt-4 block text-xs text-slate-500">
+                    Para confirmar, digite: <strong className="text-rose-200">APLICAR CORREÇÃO</strong>
+                  </label>
+                  <input
+                    id="execution-confirmation"
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    autoComplete="off"
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-rose-400"
+                  />
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={executing}
+                      onClick={() => void executeCorrection()}
+                      className="rounded-xl bg-rose-400 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                    >
+                      {executing ? "Verificando e aplicando..." : "Executar correção aprovada"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-700 bg-slate-950/45 p-4 text-sm text-slate-400">
+                  A execução exige uma terceira identidade com perfil Revisor.
+                </div>
+              )}
+            </div>
+          )}
+
+          {(context.executionStatus === "Aplicada" || context.proposalStatus === "Aplicada") && (
+            <div className="border-t border-slate-800 p-5">
+              <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                <p className="font-semibold">Correção aplicada com controle de versão</p>
+                <p className="mt-2 text-xs">Executor: {context.executorId ?? "Não identificado"}</p>
+                <p className="mt-2 text-xs">Execução: {context.executedAt ?? "Data não informada"}</p>
+                <p className="mt-2 text-xs text-emerald-100/70">Snapshot anterior e hashes preservados para auditoria e recuperação.</p>
               </div>
             </div>
           )}
