@@ -120,3 +120,7 @@ export {
 export type {
   DuplicateCandidate,
 } from "./individuals/find-duplicate-candidates";
+
+
+export { AuditEntry } from "./audit/audit-entry";
+export type { AuditEntryInput, AuditOutcome } from "./audit/audit-entry";
