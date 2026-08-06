@@ -5,6 +5,8 @@ import {
   useState,
 } from "react";
 
+import { ReviewComparisonPanel } from "./review-comparison-panel";
+
 type ReviewStatus =
   | "open"
   | "completed"
@@ -150,6 +152,13 @@ export function ReviewQueueClient() {
       null,
     );
   const [
+    comparisonReview,
+    setComparisonReview,
+  ] =
+    useState<ReviewItem | null>(
+      null,
+    );
+  const [
     decision,
     setDecision,
   ] = useState<
@@ -230,6 +239,7 @@ export function ReviewQueueClient() {
       setConnected(true);
       setStatus(nextStatus);
       setSelected(null);
+      setComparisonReview(null);
     } catch (caught) {
       setConnected(false);
       setItems([]);
@@ -611,26 +621,55 @@ export function ReviewQueueClient() {
                     </p>
                   </div>
 
-                  {item.status ===
-                    "open" && (
+                  <div className="flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        openDecision(
+                      onClick={() => {
+                        setComparisonReview(
                           item,
-                        )
-                      }
-                      className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                        );
+                        setSelected(
+                          null,
+                        );
+                      }}
+                      className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/15"
                     >
-                      Revisar
+                      Comparar
                     </button>
-                  )}
+
+                    {item.status ===
+                      "open" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openDecision(
+                            item,
+                          )
+                        }
+                        className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                      >
+                        Revisar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         )}
       </section>
+
+      {comparisonReview && (
+        <ReviewComparisonPanel
+          apiKey={apiKey.trim()}
+          review={comparisonReview}
+          onClose={() =>
+            setComparisonReview(
+              null,
+            )
+          }
+        />
+      )}
 
       {selected && (
         <section className="mt-6 rounded-2xl border border-cyan-400/20 bg-[#0a1020] p-5 md:p-6">
