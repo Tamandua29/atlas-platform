@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -185,6 +186,39 @@ export function ReviewQueueClient() {
         ).length,
       [items],
     );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const response = await fetch("/api/auth/session", {
+          cache: "no-store",
+        });
+
+        if (!response.ok || cancelled) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          authenticated?: boolean;
+        };
+
+        if (payload.authenticated && !cancelled) {
+          setConnected(true);
+          await loadReviews("open");
+        }
+      } catch {
+        // A ausência de sessão mantém a tela protegida sem expor detalhes.
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function authenticateAndLoad() {
     const credential = apiKey.trim();
