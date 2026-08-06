@@ -129,13 +129,14 @@ export async function listAllAirtableRecords<RecordFields>(
 export async function createAirtableRecord<RecordFields>(
   tableId: string,
   fields: RecordFields,
+  options: { baseId?: string } = {},
 ): Promise<AirtableRecord<RecordFields>> {
   const configuration =
     getAirtableConfiguration();
 
   const endpoint =
     `${AIRTABLE_API_URL}/` +
-    `${configuration.baseId}/` +
+    `${options.baseId ?? configuration.baseId}/` +
     tableId;
 
   const response = await fetch(endpoint, {
