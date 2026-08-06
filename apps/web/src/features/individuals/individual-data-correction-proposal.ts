@@ -35,6 +35,9 @@ type ProposalReviewFields = {
   "Aprovador Técnico"?: string;
   "Justificativa da Decisão da Proposta"?: string;
   "Proposta Decidida em"?: string;
+  "Situação da Execução"?: string;
+  "Executor Técnico"?: string;
+  "Executada em"?: string;
 };
 
 type IndividualFields = {
@@ -57,6 +60,9 @@ export type ProtectedCorrectionProposalContext = {
   approverId: string | null;
   decisionReason: string | null;
   decidedAt: string | null;
+  executionStatus: string | null;
+  executorId: string | null;
+  executedAt: string | null;
 };
 
 function maskDocument(value: string | undefined): string {
@@ -174,6 +180,9 @@ async function loadContext(reviewId: string) {
         "Aprovador Técnico",
         "Justificativa da Decisão da Proposta",
         "Proposta Decidida em",
+        "Situação da Execução",
+        "Executor Técnico",
+        "Executada em",
       ],
       filterByFormula: `{ID Revisão}='${reviewId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
@@ -238,6 +247,9 @@ export async function getProtectedCorrectionProposalContext(
     decisionReason:
       context.review.fields["Justificativa da Decisão da Proposta"]?.trim() || null,
     decidedAt: context.review.fields["Proposta Decidida em"] ?? null,
+    executionStatus: context.review.fields["Situação da Execução"] ?? null,
+    executorId: context.review.fields["Executor Técnico"]?.trim() || null,
+    executedAt: context.review.fields["Executada em"] ?? null,
   };
 }
 
