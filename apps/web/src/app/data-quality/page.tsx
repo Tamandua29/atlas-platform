@@ -15,6 +15,9 @@ export default function DataQualityPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href="/data-quality/queue" className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200">
+              Fila de saneamento
+            </Link>
             <Link href="/identification-dashboard" className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">
               Painel
             </Link>
