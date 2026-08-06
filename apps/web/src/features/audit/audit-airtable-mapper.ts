@@ -46,7 +46,9 @@ export function mapAuditEntryToAirtable(
           ? "Concluída com ressalvas"
           : "Falhou",
     "Nível de Impacto": "Baixo",
-    "Requer Revisão": false,
+    "Requer Revisão":
+      entry.action ===
+      "individuals.duplicate-review.enqueue",
     "Classificação da Informação":
       "Uso interno",
     "Registro Ativo": true,
