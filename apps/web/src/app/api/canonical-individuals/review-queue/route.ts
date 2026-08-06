@@ -26,7 +26,7 @@ function parseLimit(value: string | null): number {
 }
 
 export async function GET(request: NextRequest) {
-  const authorization = await authorizeAtlas(["reviewer"]);
+  const authorization = await authorizeAtlas(["reviewer", "auditor"]);
   if (!authorization.authorized) return authorization.response;
   const { session } = authorization;
   const correlationId = crypto.randomUUID();
