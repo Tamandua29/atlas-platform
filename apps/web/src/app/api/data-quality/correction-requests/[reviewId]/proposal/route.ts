@@ -53,9 +53,26 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {
+    const audit = AuditEntry.create({
+      action: "individuals.data-quality.correction-proposal.read",
+      outcome: "failure",
+      occurredAt: new Date(),
+      correlationId,
+      processedCount: 1,
+      failureCount: 1,
+      metadata: {
+        actorId: session.actorId,
+        actorRole: session.role,
+        reviewId,
+        mode: "protected-proposal-read-no-source-write",
+      },
+    });
+    const auditPersisted = await persistAuditSafely(audit);
+
     return NextResponse.json(
       {
         success: false,
+        auditPersisted,
         correlationId,
         sourceWritesPerformed: 0,
         message: error instanceof Error ? error.message : "Erro desconhecido.",
