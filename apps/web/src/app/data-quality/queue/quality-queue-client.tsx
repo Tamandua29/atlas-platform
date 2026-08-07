@@ -60,6 +60,7 @@ export function QualityQueueClient() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<ProtectedDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [actorRole, setActorRole] = useState<"reviewer" | "auditor" | "administrator" | null>(null);
   const [justification, setJustification] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [requestResult, setRequestResult] = useState("");
@@ -69,13 +70,22 @@ export function QualityQueueClient() {
     setError("");
 
     try {
-      const response = await fetch(
-        `/api/data-quality/individuals/queue?priority=${nextPriority}`,
-        { cache: "no-store" },
-      );
+      const [response, sessionResponse] = await Promise.all([
+        fetch(
+          `/api/data-quality/individuals/queue?priority=${nextPriority}`,
+          { cache: "no-store" },
+        ),
+        fetch("/api/auth/session", { cache: "no-store" }),
+      ]);
       const payload = (await response.json()) as Payload;
       if (!response.ok || !payload.success) {
         throw new Error(payload.message ?? "Não foi possível consultar a fila.");
+      }
+      if (sessionResponse.ok) {
+        const session = (await sessionResponse.json()) as {
+          actor?: { role?: "reviewer" | "auditor" | "administrator" };
+        };
+        setActorRole(session.actor?.role ?? null);
       }
       setItems(payload.items ?? []);
       setAuditPersisted(payload.auditPersisted ?? false);
