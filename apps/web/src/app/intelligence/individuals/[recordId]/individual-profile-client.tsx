@@ -79,16 +79,27 @@ type Warrant = {
   consultedAt: string | null;
 };
 
+type Occurrence = {
+  recordId: string;
+  maskedOccurrenceNumber: string;
+  occurredAt: string | null;
+  nature: string | null;
+  category: string | null;
+  status: string | null;
+  source: string | null;
+  confidence: string | null;
+  verificationStatus: string | null;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[] };
   message?: string;
 };
 
 const sections = [
-  ["Ocorrências", "Registros operacionais relacionados"],
   ["Relatórios", "Documentos e análises vinculadas"],
   ["Organizações", "Facções e grupos relacionados"],
   ["Vínculos", "Comparsas e conexões entre entidades"],
@@ -102,6 +113,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [warrants, setWarrants] = useState<Warrant[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -123,6 +135,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setVehicles(payload.relationships?.vehicles || []);
           setWarrants(payload.relationships?.warrants || []);
           setPhotos(payload.relationships?.photos || []);
+          setOccurrences(payload.relationships?.occurrences || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -426,6 +439,51 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Ocorrências vinculadas</h3>
+              <p className="mt-2 text-slate-400">Referências operacionais relacionadas à pessoa, com narrativa e anexos protegidos.</p>
+            </div>
+            <span className="rounded-full bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-300">
+              {occurrences.length} vinculada(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 md:grid-cols-2">
+          {occurrences.length === 0 ? (
+            <p className="text-slate-500">Nenhuma ocorrência vinculada foi localizada.</p>
+          ) : occurrences.map((occurrence) => (
+            <article key={occurrence.recordId} className="rounded-2xl border border-rose-400/20 bg-slate-950/50 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-300">
+                    {occurrence.category || "Ocorrência"}
+                  </p>
+                  <h4 className="mt-3 text-xl font-semibold text-white">
+                    {occurrence.nature || "Natureza não informada"}
+                  </h4>
+                </div>
+                <span className="rounded-lg border border-rose-400/20 px-3 py-2 font-mono text-sm text-rose-200">
+                  {occurrence.maskedOccurrenceNumber}
+                </span>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <OccurrenceInfo label="Data e hora" value={occurrence.occurredAt ? formatDateTime(occurrence.occurredAt) : null} />
+                <OccurrenceInfo label="Situação" value={occurrence.status} />
+                <OccurrenceInfo label="Fonte" value={occurrence.source} />
+                <OccurrenceInfo label="Confiabilidade" value={occurrence.confidence} />
+                <OccurrenceInfo label="Verificação" value={occurrence.verificationStatus} />
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: descrição, resultado operacional, observações e anexos não são enviados ao navegador.
+        </p>
+      </section>
+
       <section>
         <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
         <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
@@ -467,6 +525,15 @@ function openStreetMapEmbedUrl(latitude: number, longitude: number) {
   ].join(",");
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function OccurrenceInfo({ label, value }: { label: string; value: string | null }) {
+  return (
+    <p>
+      <span className="block text-xs text-slate-600">{label}</span>
+      <span className="text-sm text-slate-300">{value || "Não informado"}</span>
+    </p>
+  );
 }
 
 function WarrantInfo({ label, value }: { label: string; value: string | null }) {
