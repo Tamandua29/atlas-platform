@@ -69,7 +69,7 @@ function stableValues(fields: IndividualFields): StableValues {
     legalName: fields["Nome Completo"]?.trim() ?? null,
     birthDate: fields["Data de Nascimento"]?.trim() ?? null,
     motherName: fields.Mãe?.trim() ?? null,
-    cpf: normalizeCpf(fields.CPF) ?? null,
+    cpf: normalizeCpf(fields.CPF ?? undefined) ?? null,
     identityDocument: fields["Registro Geral"]?.trim() ?? null,
   };
 }
