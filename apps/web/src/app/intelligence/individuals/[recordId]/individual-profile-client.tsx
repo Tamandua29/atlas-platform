@@ -2,6 +2,23 @@
 
 import { useEffect, useState } from "react";
 
+type Photo = {
+  evidenceRecordId: string;
+  attachmentId: string;
+  title: string;
+  url: string;
+  thumbnailUrl: string;
+  capturedAt: string | null;
+  verificationStatus: string | null;
+  width: number | null;
+  height: number | null;
+};
+
+type MainPhoto = Omit<Photo, "evidenceRecordId" | "attachmentId" | "title" | "capturedAt" | "verificationStatus"> & {
+  id: string;
+  filename: string | null;
+};
+
 type Individual = {
   recordId: string;
   legalName: string;
@@ -10,6 +27,7 @@ type Individual = {
   motherName: string | null;
   cpfPresent: boolean;
   identityDocumentPresent: boolean;
+  mainPhoto: MainPhoto | null;
 };
 
 type Address = {
@@ -65,12 +83,11 @@ type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[] };
   message?: string;
 };
 
 const sections = [
-  ["Fotografias", "Acervo visual autorizado"],
   ["Ocorrências", "Registros operacionais relacionados"],
   ["Relatórios", "Documentos e análises vinculadas"],
   ["Organizações", "Facções e grupos relacionados"],
@@ -84,6 +101,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [phones, setPhones] = useState<Phone[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [warrants, setWarrants] = useState<Warrant[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -104,6 +122,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setPhones(payload.relationships?.phones || []);
           setVehicles(payload.relationships?.vehicles || []);
           setWarrants(payload.relationships?.warrants || []);
+          setPhotos(payload.relationships?.photos || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -136,14 +155,19 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
       <section className="rounded-3xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-cyan-950/40 p-8">
         <div className="flex flex-col justify-between gap-6 md:flex-row">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-36 w-28 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/30 bg-slate-950/70 text-3xl font-black text-cyan-300">
-              {initials}
+            <div
+              role={individual.mainPhoto ? "img" : undefined}
+              aria-label={individual.mainPhoto ? `Foto principal de ${individual.legalName}` : undefined}
+              className="flex h-36 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-950/70 bg-cover bg-center text-3xl font-black text-cyan-300"
+              style={individual.mainPhoto ? { backgroundImage: `url("${individual.mainPhoto.thumbnailUrl}")` } : undefined}
+            >
+              {individual.mainPhoto ? null : initials}
             </div>
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-400">Pessoa</p>
               <h2 className="mt-3 text-4xl font-bold text-white">{individual.legalName}</h2>
               <p className="mt-3 text-xl text-slate-300">{individual.alias || "Sem vulgo informado"}</p>
-              <p className="mt-3 text-xs uppercase tracking-[0.14em] text-slate-500">Foto principal será exibida neste espaço</p>
+              <p className="mt-3 text-xs uppercase tracking-[0.14em] text-slate-500">{individual.mainPhoto ? "Foto principal autorizada" : "Foto principal não cadastrada"}</p>
             </div>
           </div>
           <div className="h-fit rounded-2xl border border-emerald-400/20 bg-slate-950/50 p-5 text-emerald-300">
@@ -157,6 +181,52 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         <Info label="Filiação materna" value={individual.motherName || "Não informada"} />
         <Info label="CPF" value={individual.cpfPresent ? "Documento presente" : "Não informado"} />
         <Info label="RG" value={individual.identityDocumentPresent ? "Documento presente" : "Não informado"} />
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Fotografias vinculadas</h3>
+              <p className="mt-2 text-slate-400">Acervo visual autorizado, filtrado por tipo de evidência e acesso auditado.</p>
+            </div>
+            <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-300">
+              {photos.length} vinculada(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {photos.length === 0 ? (
+            <p className="text-slate-500">Nenhuma fotografia vinculada foi localizada.</p>
+          ) : photos.map((photo) => (
+            <article key={`${photo.evidenceRecordId}-${photo.attachmentId}`} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/50">
+              <a
+                href={photo.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Abrir ${photo.title}`}
+                className="block aspect-[4/3] bg-slate-900 bg-cover bg-center"
+                style={{ backgroundImage: `url("${photo.thumbnailUrl}")` }}
+              />
+              <div className="p-4">
+                <h4 className="font-semibold text-white">{photo.title}</h4>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                  <span className="rounded-lg border border-slate-700 px-2.5 py-1.5">
+                    {photo.verificationStatus || "Verificação não informada"}
+                  </span>
+                  {photo.capturedAt ? (
+                    <span className="rounded-lg border border-slate-700 px-2.5 py-1.5">
+                      {formatDateTime(photo.capturedAt)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: somente anexos de imagem classificados como fotografia ou imagem de câmera são enviados.
+        </p>
       </section>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
@@ -371,6 +441,16 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
       </section>
     </div>
   );
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(date);
 }
 
 function openStreetMapUrl(latitude: number, longitude: number) {
