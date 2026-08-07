@@ -6,6 +6,7 @@ import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { listAddressesForIndividual } from "@/features/intelligence/individual-addresses";
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
 import { listOccurrencesForIndividual } from "@/features/intelligence/individual-occurrences";
+import { listOrganizationsForIndividual } from "@/features/intelligence/individual-organizations";
 import { listPhonesForIndividual } from "@/features/intelligence/individual-phones";
 import { listPhotosForIndividual } from "@/features/intelligence/individual-photos";
 import { listVehiclesForIndividual } from "@/features/intelligence/individual-vehicles";
@@ -24,7 +25,7 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [individual, addresses, phones, vehicles, warrants, photos, occurrences] = await Promise.all([
+    const [individual, addresses, phones, vehicles, warrants, photos, occurrences, organizations] = await Promise.all([
       getIndividualDirectoryEntry(recordId),
       listAddressesForIndividual(recordId),
       listPhonesForIndividual(recordId),
@@ -32,6 +33,7 @@ export async function GET(
       listWarrantsForIndividual(recordId),
       listPhotosForIndividual(recordId),
       listOccurrencesForIndividual(recordId),
+      listOrganizationsForIndividual(recordId),
     ]);
 
     if (!individual) {
@@ -46,7 +48,8 @@ export async function GET(
       + vehicles.length
       + warrants.length
       + photos.length
-      + occurrences.length;
+      + occurrences.length
+      + organizations.length;
 
     const auditPersisted = await persistAuditSafely(AuditEntry.create({
       action: "intelligence.individuals.profile",
@@ -65,6 +68,7 @@ export async function GET(
         warrantCount: warrants.length,
         photoCount: photos.length,
         occurrenceCount: occurrences.length,
+        organizationCount: organizations.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -75,7 +79,7 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
-        relationships: { addresses, phones, vehicles, warrants, photos, occurrences },
+        relationships: { addresses, phones, vehicles, warrants, photos, occurrences, organizations },
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
