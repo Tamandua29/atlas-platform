@@ -17,8 +17,25 @@ export type AuditEntryInput = {
   readonly metadata?: Readonly<Record<string, unknown>>;
 };
 
-const SENSITIVE_KEYS =
-  /cpf|rg|password|senha|token|secret|documento/i;
+const SENSITIVE_KEY_SEGMENTS = new Set([
+  "cpf",
+  "rg",
+  "password",
+  "senha",
+  "token",
+  "secret",
+  "documento",
+]);
+
+function isSensitiveMetadataKey(key: string): boolean {
+  const segments = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .split(/[^a-z0-9áàâãéèêíïóôõöúç]+/)
+    .filter(Boolean);
+
+  return segments.some((segment) => SENSITIVE_KEY_SEGMENTS.has(segment));
+}
 
 export class AuditEntry {
   readonly id: UniqueEntityId;
@@ -60,8 +77,8 @@ export class AuditEntry {
       throw new ValidationError("As contagens de auditoria devem ser inteiros não negativos.");
     }
 
-    const sensitiveKey = Object.keys(input.metadata ?? {}).find((key) =>
-      SENSITIVE_KEYS.test(key),
+    const sensitiveKey = Object.keys(input.metadata ?? {}).find(
+      isSensitiveMetadataKey,
     );
 
     if (sensitiveKey) {
