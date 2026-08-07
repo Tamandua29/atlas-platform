@@ -5,6 +5,7 @@ import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { listAddressesForIndividual } from "@/features/intelligence/individual-addresses";
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
+import { listDocumentsForIndividual } from "@/features/intelligence/individual-documents";
 import { listOccurrencesForIndividual } from "@/features/intelligence/individual-occurrences";
 import { listOrganizationsForIndividual } from "@/features/intelligence/individual-organizations";
 import { listRelationshipsForIndividual } from "@/features/intelligence/individual-relationships";
@@ -26,7 +27,18 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [individual, addresses, phones, vehicles, warrants, photos, occurrences, organizations, personalRelationships] = await Promise.all([
+    const [
+      individual,
+      addresses,
+      phones,
+      vehicles,
+      warrants,
+      photos,
+      occurrences,
+      organizations,
+      personalRelationships,
+      documents,
+    ] = await Promise.all([
       getIndividualDirectoryEntry(recordId),
       listAddressesForIndividual(recordId),
       listPhonesForIndividual(recordId),
@@ -36,6 +48,7 @@ export async function GET(
       listOccurrencesForIndividual(recordId),
       listOrganizationsForIndividual(recordId),
       listRelationshipsForIndividual(recordId),
+      listDocumentsForIndividual(recordId),
     ]);
 
     if (!individual) {
@@ -52,7 +65,8 @@ export async function GET(
       + photos.length
       + occurrences.length
       + organizations.length
-      + personalRelationships.length;
+      + personalRelationships.length
+      + documents.length;
 
     const auditPersisted = await persistAuditSafely(AuditEntry.create({
       action: "intelligence.individuals.profile",
@@ -73,6 +87,7 @@ export async function GET(
         occurrenceCount: occurrences.length,
         organizationCount: organizations.length,
         personalRelationshipCount: personalRelationships.length,
+        documentCount: documents.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -83,7 +98,17 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
-        relationships: { addresses, phones, vehicles, warrants, photos, occurrences, organizations, personalRelationships },
+        relationships: {
+          addresses,
+          phones,
+          vehicles,
+          warrants,
+          photos,
+          occurrences,
+          organizations,
+          personalRelationships,
+          documents,
+        },
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
