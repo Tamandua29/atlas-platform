@@ -4,7 +4,7 @@ import {
   collapseWhitespace,
   normalizeSearchText,
 } from "../normalization/text-normalization";
-import { SourceRecordReference } from "../provenance/source-record-reference";
+import type { SourceRecordReference } from "../provenance/source-record-reference";
 import {
   buildIndividualMatchKey,
   isStructurallyValidCpf,
