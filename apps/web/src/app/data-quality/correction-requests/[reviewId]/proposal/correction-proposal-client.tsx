@@ -287,7 +287,13 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
   }
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+    // Reload only when the protected proposal identifier changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewId]);
 
   const canWrite = actorRole === "reviewer" || actorRole === "administrator";
