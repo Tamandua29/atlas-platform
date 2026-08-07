@@ -6,6 +6,7 @@ import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { listAddressesForIndividual } from "@/features/intelligence/individual-addresses";
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
 import { listPhonesForIndividual } from "@/features/intelligence/individual-phones";
+import { listVehiclesForIndividual } from "@/features/intelligence/individual-vehicles";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,11 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [individual, addresses, phones] = await Promise.all([
+    const [individual, addresses, phones, vehicles] = await Promise.all([
       getIndividualDirectoryEntry(recordId),
       listAddressesForIndividual(recordId),
       listPhonesForIndividual(recordId),
+      listVehiclesForIndividual(recordId),
     ]);
 
     if (!individual) {
@@ -33,7 +35,7 @@ export async function GET(
       );
     }
 
-    const relationshipCount = addresses.length + phones.length;
+    const relationshipCount = addresses.length + phones.length + vehicles.length;
     const auditPersisted = await persistAuditSafely(AuditEntry.create({
       action: "intelligence.individuals.profile",
       outcome: "success",
@@ -47,6 +49,7 @@ export async function GET(
         recordId,
         addressCount: addresses.length,
         phoneCount: phones.length,
+        vehicleCount: vehicles.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -57,7 +60,7 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
-        relationships: { addresses, phones },
+        relationships: { addresses, phones, vehicles },
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
