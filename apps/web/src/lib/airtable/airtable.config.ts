@@ -4,6 +4,8 @@ type AirtableConfiguration = {
   accessToken: string;
   baseId: string;
   occurrencesTableId: string;
+  organizationsTableId: string;
+  organizationalLinksTableId: string;
   addressesTableId: string;
   phonesTableId: string;
   vehiclesTableId: string;
@@ -39,6 +41,14 @@ export function getAirtableConfiguration(): AirtableConfiguration {
 
     occurrencesTableId: getRequiredEnvironmentVariable(
       "AIRTABLE_OCCURRENCES_TABLE_ID",
+    ),
+
+    organizationsTableId: getRequiredEnvironmentVariable(
+      "AIRTABLE_ORGANIZATIONS_TABLE_ID",
+    ),
+
+    organizationalLinksTableId: getRequiredEnvironmentVariable(
+      "AIRTABLE_ORGANIZATIONAL_LINKS_TABLE_ID",
     ),
 
     addressesTableId: getRequiredEnvironmentVariable(
