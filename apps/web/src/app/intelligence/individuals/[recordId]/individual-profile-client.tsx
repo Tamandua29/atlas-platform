@@ -24,16 +24,25 @@ type Address = {
   longitude: number | null;
 };
 
+type Phone = {
+  recordId: string;
+  maskedNumber: string;
+  type: string | null;
+  carrier: string | null;
+  status: string | null;
+  source: string | null;
+  informationDate: string | null;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[] };
   message?: string;
 };
 
 const sections = [
-  ["Telefones", "Contatos e linhas relacionadas"],
   ["Veículos", "Propriedade, uso e vínculos"],
   ["Mandados", "Restrições e situação"],
   ["Fotografias", "Acervo visual autorizado"],
@@ -47,6 +56,7 @@ const sections = [
 export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [individual, setIndividual] = useState<Individual | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [phones, setPhones] = useState<Phone[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -64,6 +74,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           }
           setIndividual(payload.individual);
           setAddresses(payload.relationships?.addresses || []);
+          setPhones(payload.relationships?.phones || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -185,6 +196,41 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Telefones vinculados</h3>
+              <p className="mt-2 text-slate-400">Linhas relacionadas à pessoa, exibidas de forma mascarada e auditada.</p>
+            </div>
+            <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-300">
+              {phones.length} vinculado(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-3">
+          {phones.length === 0 ? (
+            <p className="text-slate-500">Nenhum telefone vinculado foi localizado.</p>
+          ) : phones.map((phone) => (
+            <article key={phone.recordId} className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-400">
+                {phone.type || "Telefone"}
+              </p>
+              <h4 className="mt-3 text-xl font-semibold text-white">{phone.maskedNumber}</h4>
+              <div className="mt-4 grid gap-3 text-sm text-slate-400">
+                <PhoneInfo label="Operadora" value={phone.carrier} />
+                <PhoneInfo label="Situação" value={phone.status} />
+                <PhoneInfo label="Fonte" value={phone.source} />
+                <PhoneInfo label="Data da informação" value={phone.informationDate} />
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: o número completo não é enviado ao navegador.
+        </p>
+      </section>
+
       <section>
         <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
         <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
@@ -216,6 +262,15 @@ function openStreetMapEmbedUrl(latitude: number, longitude: number) {
   ].join(",");
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function PhoneInfo({ label, value }: { label: string; value: string | null }) {
+  return (
+    <p>
+      <span className="text-slate-600">{label}:</span>{" "}
+      <span className="text-slate-300">{value || "Não informado"}</span>
+    </p>
+  );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
