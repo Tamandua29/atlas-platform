@@ -3,6 +3,20 @@ import "server-only";
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
 
+type AirtableAttachment = {
+  id?: string;
+  url?: string;
+  filename?: string;
+  type?: string;
+  width?: number;
+  height?: number;
+  thumbnails?: {
+    small?: { url?: string };
+    large?: { url?: string };
+    full?: { url?: string };
+  };
+};
+
 type IndividualFields = {
   "Nome Completo"?: string;
   "Vulgo Principal"?: string;
@@ -10,6 +24,16 @@ type IndividualFields = {
   CPF?: string;
   "Registro Geral"?: string;
   Mãe?: string;
+  "Foto Principal"?: AirtableAttachment[];
+};
+
+export type ProtectedPhoto = {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  filename: string | null;
+  width: number | null;
+  height: number | null;
 };
 
 export type IndividualDirectoryEntry = {
@@ -20,6 +44,7 @@ export type IndividualDirectoryEntry = {
   motherName: string | null;
   cpfPresent: boolean;
   identityDocumentPresent: boolean;
+  mainPhoto: ProtectedPhoto | null;
   createdAt: string;
 };
 
@@ -31,6 +56,10 @@ function mapIndividual(record: {
   const legalName = record.fields["Nome Completo"]?.trim();
   if (!legalName) return null;
 
+  const attachment = record.fields["Foto Principal"]?.find(
+    (item) => item.url && (!item.type || item.type.startsWith("image/")),
+  );
+
   return {
     recordId: record.id,
     legalName,
@@ -39,6 +68,17 @@ function mapIndividual(record: {
     motherName: record.fields.Mãe?.trim() || null,
     cpfPresent: Boolean(record.fields.CPF?.trim()),
     identityDocumentPresent: Boolean(record.fields["Registro Geral"]?.trim()),
+    mainPhoto: attachment?.url ? {
+      id: attachment.id || `main-${record.id}`,
+      url: attachment.url,
+      thumbnailUrl: attachment.thumbnails?.large?.url
+        || attachment.thumbnails?.full?.url
+        || attachment.thumbnails?.small?.url
+        || attachment.url,
+      filename: attachment.filename || null,
+      width: attachment.width || null,
+      height: attachment.height || null,
+    } : null,
     createdAt: record.createdTime,
   };
 }
@@ -50,6 +90,7 @@ const fields = [
   "CPF",
   "Registro Geral",
   "Mãe",
+  "Foto Principal",
 ];
 
 export async function listIndividualDirectory(
