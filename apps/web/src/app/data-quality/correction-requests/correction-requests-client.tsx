@@ -129,7 +129,13 @@ export function CorrectionRequestsClient() {
   }
 
   useEffect(() => {
-    void load("all");
+    const timer = window.setTimeout(() => {
+      void load("all");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+    // The initial queue query intentionally runs only once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const canWrite = actorRole === "reviewer" || actorRole === "administrator";
