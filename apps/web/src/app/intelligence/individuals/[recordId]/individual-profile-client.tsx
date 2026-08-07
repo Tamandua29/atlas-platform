@@ -137,7 +137,10 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           ) : addresses.map((address) => {
             const hasCoordinates = address.latitude !== null && address.longitude !== null;
             const mapUrl = hasCoordinates
-              ? `https://www.openstreetmap.org/?mlat=${address.latitude}&mlon=${address.longitude}#map=17/${address.latitude}/${address.longitude}`
+              ? openStreetMapUrl(address.latitude, address.longitude)
+              : null;
+            const mapEmbedUrl = hasCoordinates
+              ? openStreetMapEmbedUrl(address.latitude, address.longitude)
               : null;
 
             return (
@@ -153,15 +156,26 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
                   </span>
                   {address.source ? <span className="rounded-lg border border-slate-700 px-3 py-2">Fonte: {address.source}</span> : null}
                 </div>
-                {mapUrl ? (
-                  <a
-                    href={mapUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-5 inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-300"
-                  >
-                    Ver coordenadas
-                  </a>
+                {mapUrl && mapEmbedUrl ? (
+                  <div className="mt-5 space-y-3">
+                    <div className="overflow-hidden rounded-xl border border-cyan-400/20 bg-slate-900">
+                      <iframe
+                        title={`Mapa de ${address.label}`}
+                        src={mapEmbedUrl}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="h-64 w-full"
+                      />
+                    </div>
+                    <a
+                      href={mapUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-300"
+                    >
+                      Abrir no OpenStreetMap
+                    </a>
+                  </div>
                 ) : (
                   <p className="mt-5 text-sm text-amber-300">Sem coordenadas válidas</p>
                 )}
@@ -186,6 +200,22 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
       </section>
     </div>
   );
+}
+
+function openStreetMapUrl(latitude: number, longitude: number) {
+  return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`;
+}
+
+function openStreetMapEmbedUrl(latitude: number, longitude: number) {
+  const offset = 0.006;
+  const boundingBox = [
+    longitude - offset,
+    latitude - offset,
+    longitude + offset,
+    latitude + offset,
+  ].join(",");
+
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
 }
 
 function Info({ label, value }: { label: string; value: string }) {
