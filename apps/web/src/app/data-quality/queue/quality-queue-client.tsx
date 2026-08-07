@@ -60,7 +60,6 @@ export function QualityQueueClient() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<ProtectedDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [actorRole, setActorRole] = useState<"reviewer" | "auditor" | "administrator" | null>(null);
   const [justification, setJustification] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [requestResult, setRequestResult] = useState("");
@@ -164,7 +163,13 @@ export function QualityQueueClient() {
   }
 
   useEffect(() => {
-    void load("all");
+    const timer = window.setTimeout(() => {
+      void load("all");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+    // The initial queue query intentionally runs only once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
