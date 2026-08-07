@@ -88,6 +88,7 @@ export async function createAtlasSession(): Promise<AtlasSession> {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: SESSION_DURATION_SECONDS,
+    priority: "high",
   });
   return session;
 }
@@ -100,6 +101,7 @@ export async function clearAtlasSession(): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
+    priority: "high",
   });
 }
 
@@ -122,15 +124,20 @@ export async function readAtlasSession(): Promise<AtlasSession | null> {
     const session = JSON.parse(
       new TextDecoder().decode(base64UrlToBytes(payload)),
     ) as AtlasSession;
+    const now = Math.floor(Date.now() / 1000);
     if (
       typeof session.actorId !== "string"
+      || session.actorId.length < 3
       || (
         session.role !== "reviewer"
         && session.role !== "auditor"
         && session.role !== "administrator"
       )
+      || typeof session.issuedAt !== "number"
+      || session.issuedAt > now + 60
       || typeof session.expiresAt !== "number"
-      || session.expiresAt <= Math.floor(Date.now() / 1000)
+      || session.expiresAt <= now
+      || session.expiresAt - session.issuedAt > SESSION_DURATION_SECONDS
     ) return null;
     return session;
   } catch {
@@ -138,9 +145,29 @@ export async function readAtlasSession(): Promise<AtlasSession | null> {
   }
 }
 
-export function validBootstrapCredential(value: unknown): boolean {
+async function credentialDigest(value: string): Promise<Uint8Array> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return new Uint8Array(digest);
+}
+
+export async function validBootstrapCredential(value: unknown): Promise<boolean> {
   const expected = process.env.ATLAS_INTERNAL_API_KEY?.trim();
-  return Boolean(expected && typeof value === "string" && value.trim() === expected);
+  if (!expected || typeof value !== "string") return false;
+
+  const candidate = value.trim();
+  const [expectedDigest, candidateDigest] = await Promise.all([
+    credentialDigest(expected),
+    credentialDigest(candidate),
+  ]);
+
+  let difference = 0;
+  for (let index = 0; index < expectedDigest.length; index += 1) {
+    difference |= expectedDigest[index]! ^ candidateDigest[index]!;
+  }
+  return difference === 0;
 }
 
 export function hasRole(session: AtlasSession, allowed: AtlasRole[]): boolean {
