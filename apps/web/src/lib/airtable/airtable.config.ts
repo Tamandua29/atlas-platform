@@ -7,6 +7,7 @@ type AirtableConfiguration = {
   organizationsTableId: string;
   organizationalLinksTableId: string;
   relationshipsTableId: string;
+  documentsTableId: string;
   addressesTableId: string;
   phonesTableId: string;
   vehiclesTableId: string;
@@ -54,6 +55,10 @@ export function getAirtableConfiguration(): AirtableConfiguration {
 
     relationshipsTableId: getRequiredEnvironmentVariable(
       "AIRTABLE_RELATIONSHIPS_TABLE_ID",
+    ),
+
+    documentsTableId: getRequiredEnvironmentVariable(
+      "AIRTABLE_DOCUMENTS_TABLE_ID",
     ),
 
     addressesTableId: getRequiredEnvironmentVariable(
