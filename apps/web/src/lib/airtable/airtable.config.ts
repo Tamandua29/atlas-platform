@@ -7,6 +7,7 @@ type AirtableConfiguration = {
   addressesTableId: string;
   phonesTableId: string;
   vehiclesTableId: string;
+  warrantsTableId: string;
   individualsTableId: string;
   individualsPreviewBaseId: string;
 };
@@ -49,6 +50,10 @@ export function getAirtableConfiguration(): AirtableConfiguration {
 
     vehiclesTableId: getRequiredEnvironmentVariable(
       "AIRTABLE_VEHICLES_TABLE_ID",
+    ),
+
+    warrantsTableId: getRequiredEnvironmentVariable(
+      "AIRTABLE_WARRANTS_TABLE_ID",
     ),
 
     individualsTableId: getRequiredEnvironmentVariable(
