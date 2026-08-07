@@ -121,16 +121,29 @@ type PersonalRelationship = {
   sourceRegistered: boolean;
 };
 
+type Document = {
+  recordId: string;
+  documentReference: string;
+  title: string;
+  documentType: string | null;
+  documentDate: string | null;
+  originAgency: string | null;
+  informationClassification: string | null;
+  verificationStatus: string | null;
+  protectedAttachmentCount: number;
+  occurrenceReferenceCount: number;
+  evidenceReferenceCount: number;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[]; organizations?: Organization[]; personalRelationships?: PersonalRelationship[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[]; organizations?: Organization[]; personalRelationships?: PersonalRelationship[]; documents?: Document[] };
   message?: string;
 };
 
 const sections = [
-  ["Relatórios", "Documentos e análises vinculadas"],
   ["Linha do tempo", "Eventos ordenados cronologicamente"],
 ] as const;
 
@@ -144,6 +157,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [personalRelationships, setPersonalRelationships] = useState<PersonalRelationship[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -168,6 +182,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setOccurrences(payload.relationships?.occurrences || []);
           setOrganizations(payload.relationships?.organizations || []);
           setPersonalRelationships(payload.relationships?.personalRelationships || []);
+          setDocuments(payload.relationships?.documents || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -612,6 +627,51 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Relatórios e documentos vinculados</h3>
+              <p className="mt-2 text-slate-400">Documentos explicitamente ligados à pessoa, com conteúdo e anexos protegidos.</p>
+            </div>
+            <span className="rounded-full bg-teal-400/10 px-4 py-2 text-sm font-semibold text-teal-300">
+              {documents.length} vinculado(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-3">
+          {documents.length === 0 ? (
+            <p className="text-slate-500">Nenhum relatório ou documento vinculado foi localizado.</p>
+          ) : documents.map((document) => (
+            <article key={document.recordId} className="rounded-2xl border border-teal-400/20 bg-slate-950/50 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-teal-300">
+                    {document.documentType || "Documento"}
+                  </p>
+                  <h4 className="mt-3 text-xl font-semibold text-white">{document.title}</h4>
+                  <p className="mt-2 font-mono text-xs text-slate-500">{document.documentReference}</p>
+                </div>
+                <span className="rounded-full border border-teal-400/20 px-3 py-1.5 text-xs text-teal-200">
+                  {document.verificationStatus || "Verificação não informada"}
+                </span>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <DocumentInfo label="Data do documento" value={document.documentDate} />
+                <DocumentInfo label="Órgão de origem" value={document.originAgency} />
+                <DocumentInfo label="Classificação" value={document.informationClassification} />
+                <DocumentInfo label="Arquivos protegidos" value={document.protectedAttachmentCount.toString()} />
+                <DocumentInfo label="Ocorrências relacionadas" value={document.occurrenceReferenceCount.toString()} />
+                <DocumentInfo label="Evidências relacionadas" value={document.evidenceReferenceCount.toString()} />
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: arquivos, URLs, observações, conteúdo, responsável e identificação detalhada da fonte não são enviados ao navegador.
+        </p>
+      </section>
+
       <section>
         <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
         <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
@@ -653,6 +713,15 @@ function openStreetMapEmbedUrl(latitude: number, longitude: number) {
   ].join(",");
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function DocumentInfo({ label, value }: { label: string; value: string | null }) {
+  return (
+    <p>
+      <span className="block text-xs text-slate-600">{label}</span>
+      <span className="text-sm text-slate-300">{value || "Não informado"}</span>
+    </p>
+  );
 }
 
 function RelationshipInfo({ label, value }: { label: string; value: string | null }) {
