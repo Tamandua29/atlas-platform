@@ -47,16 +47,29 @@ type Vehicle = {
   informationDate: string | null;
 };
 
+type Warrant = {
+  recordId: string;
+  maskedWarrantNumber: string;
+  maskedCaseNumber: string;
+  issuingAuthority: string | null;
+  court: string | null;
+  type: string | null;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  status: string | null;
+  sources: string[];
+  consultedAt: string | null;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[] };
   message?: string;
 };
 
 const sections = [
-  ["Mandados", "Restrições e situação"],
   ["Fotografias", "Acervo visual autorizado"],
   ["Ocorrências", "Registros operacionais relacionados"],
   ["Relatórios", "Documentos e análises vinculadas"],
@@ -70,6 +83,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [phones, setPhones] = useState<Phone[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [warrants, setWarrants] = useState<Warrant[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -89,6 +103,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setAddresses(payload.relationships?.addresses || []);
           setPhones(payload.relationships?.phones || []);
           setVehicles(payload.relationships?.vehicles || []);
+          setWarrants(payload.relationships?.warrants || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -290,6 +305,57 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Mandados vinculados</h3>
+              <p className="mt-2 text-slate-400">Referências judiciais vinculadas à pessoa, com dados sensíveis protegidos.</p>
+            </div>
+            <span className="rounded-full bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-300">
+              {warrants.length} vinculado(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 md:grid-cols-2">
+          {warrants.length === 0 ? (
+            <p className="text-slate-500">Nenhum mandado vinculado foi localizado.</p>
+          ) : warrants.map((warrant) => (
+            <article key={warrant.recordId} className="rounded-2xl border border-amber-400/20 bg-slate-950/50 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
+                    {warrant.type || "Mandado"}
+                  </p>
+                  <h4 className="mt-3 font-mono text-lg font-semibold text-white">
+                    {warrant.maskedWarrantNumber}
+                  </h4>
+                </div>
+                <span className="rounded-full border border-amber-400/30 px-3 py-1.5 text-xs font-semibold text-amber-200">
+                  {warrant.status || "Status não informado"}
+                </span>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <WarrantInfo label="Processo" value={warrant.maskedCaseNumber} />
+                <WarrantInfo label="Tribunal" value={warrant.court} />
+                <WarrantInfo label="Autoridade emissora" value={warrant.issuingAuthority} />
+                <WarrantInfo label="Emissão" value={warrant.issuedAt} />
+                <WarrantInfo label="Validade" value={warrant.expiresAt} />
+                <WarrantInfo label="Última consulta" value={warrant.consultedAt} />
+              </div>
+              {warrant.sources.length > 0 ? (
+                <p className="mt-5 text-xs text-slate-500">
+                  Fonte(s): {warrant.sources.join(", ")}
+                </p>
+              ) : null}
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: referências mascaradas; detalhes, observações e documentos não são enviados ao navegador.
+        </p>
+      </section>
+
       <section>
         <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
         <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
@@ -321,6 +387,15 @@ function openStreetMapEmbedUrl(latitude: number, longitude: number) {
   ].join(",");
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function WarrantInfo({ label, value }: { label: string; value: string | null }) {
+  return (
+    <p>
+      <span className="block text-xs text-slate-600">{label}</span>
+      <span className="text-sm text-slate-300">{value || "Não informado"}</span>
+    </p>
+  );
 }
 
 function VehicleInfo({ label, value }: { label: string; value: string | null }) {
