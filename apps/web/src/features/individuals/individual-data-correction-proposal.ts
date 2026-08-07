@@ -38,6 +38,15 @@ type ProposalReviewFields = {
   "Situação da Execução"?: string;
   "Executor Técnico"?: string;
   "Executada em"?: string;
+  "Situação da Reversão"?: string;
+  "Solicitante da Reversão"?: string;
+  "Motivo da Reversão"?: string;
+  "Reversão Solicitada em"?: string;
+  "Aprovador da Reversão"?: string;
+  "Justificativa da Reversão"?: string;
+  "Reversão Decidida em"?: string;
+  "Executor da Reversão"?: string;
+  "Revertida em"?: string;
 };
 
 type IndividualFields = {
@@ -63,6 +72,15 @@ export type ProtectedCorrectionProposalContext = {
   executionStatus: string | null;
   executorId: string | null;
   executedAt: string | null;
+  reversalStatus: string | null;
+  reversalRequesterId: string | null;
+  reversalReason: string | null;
+  reversalRequestedAt: string | null;
+  reversalApproverId: string | null;
+  reversalDecisionReason: string | null;
+  reversalDecidedAt: string | null;
+  reversalExecutorId: string | null;
+  revertedAt: string | null;
 };
 
 function maskDocument(value: string | undefined): string {
@@ -183,6 +201,15 @@ async function loadContext(reviewId: string) {
         "Situação da Execução",
         "Executor Técnico",
         "Executada em",
+        "Situação da Reversão",
+        "Solicitante da Reversão",
+        "Motivo da Reversão",
+        "Reversão Solicitada em",
+        "Aprovador da Reversão",
+        "Justificativa da Reversão",
+        "Reversão Decidida em",
+        "Executor da Reversão",
+        "Revertida em",
       ],
       filterByFormula: `{ID Revisão}='${reviewId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
@@ -250,6 +277,15 @@ export async function getProtectedCorrectionProposalContext(
     executionStatus: context.review.fields["Situação da Execução"] ?? null,
     executorId: context.review.fields["Executor Técnico"]?.trim() || null,
     executedAt: context.review.fields["Executada em"] ?? null,
+    reversalStatus: context.review.fields["Situação da Reversão"] ?? null,
+    reversalRequesterId: context.review.fields["Solicitante da Reversão"]?.trim() || null,
+    reversalReason: context.review.fields["Motivo da Reversão"]?.trim() || null,
+    reversalRequestedAt: context.review.fields["Reversão Solicitada em"] ?? null,
+    reversalApproverId: context.review.fields["Aprovador da Reversão"]?.trim() || null,
+    reversalDecisionReason: context.review.fields["Justificativa da Reversão"]?.trim() || null,
+    reversalDecidedAt: context.review.fields["Reversão Decidida em"] ?? null,
+    reversalExecutorId: context.review.fields["Executor da Reversão"]?.trim() || null,
+    revertedAt: context.review.fields["Revertida em"] ?? null,
   };
 }
 
