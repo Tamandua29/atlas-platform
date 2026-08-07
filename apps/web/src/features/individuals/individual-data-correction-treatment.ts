@@ -5,6 +5,7 @@ import {
   updateAirtableRecord,
 } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
+import { assertTreatmentTransition } from "@/features/individuals/correction-workflow-policy";
 
 const REVIEW_TABLE_ID = "tblgtBw4wOvG4utaS";
 
@@ -140,9 +141,7 @@ export async function transitionCorrectionTreatment(input: {
   if (!current) throw new Error("A solicitação possui identificação inválida.");
 
   if (input.action === "claim") {
-    if (current.status !== "open") {
-      throw new Error("Somente solicitações abertas podem ser assumidas.");
-    }
+    assertTreatmentTransition(current.status, "claim");
 
     const updated = await updateAirtableRecord<CorrectionTreatmentFields>(
       REVIEW_TABLE_ID,
@@ -164,9 +163,7 @@ export async function transitionCorrectionTreatment(input: {
   if (note.length < 10 || note.length > 1000) {
     throw new Error("A nota de conclusão deve possuir entre 10 e 1000 caracteres.");
   }
-  if (current.status !== "in_progress") {
-    throw new Error("Somente solicitações em andamento podem ser concluídas.");
-  }
+  assertTreatmentTransition(current.status, "complete");
   if (
     !input.actorIsAdministrator
     && current.assigneeId !== input.actorId
