@@ -91,17 +91,31 @@ type Occurrence = {
   verificationStatus: string | null;
 };
 
+type Organization = {
+  linkRecordId: string;
+  organizationRecordId: string;
+  name: string;
+  acronym: string | null;
+  organizationType: string | null;
+  organizationStatus: string | null;
+  role: string | null;
+  relationshipType: string | null;
+  informationStatus: string | null;
+  source: string | null;
+  confidence: string | null;
+  verificationStatus: string | null;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[]; organizations?: Organization[] };
   message?: string;
 };
 
 const sections = [
   ["Relatórios", "Documentos e análises vinculadas"],
-  ["Organizações", "Facções e grupos relacionados"],
   ["Vínculos", "Comparsas e conexões entre entidades"],
   ["Linha do tempo", "Eventos ordenados cronologicamente"],
 ] as const;
@@ -114,6 +128,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [warrants, setWarrants] = useState<Warrant[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -136,6 +151,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setWarrants(payload.relationships?.warrants || []);
           setPhotos(payload.relationships?.photos || []);
           setOccurrences(payload.relationships?.occurrences || []);
+          setOrganizations(payload.relationships?.organizations || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -484,6 +500,51 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Organizações vinculadas</h3>
+              <p className="mt-2 text-slate-400">Vínculos organizacionais registrados na fonte, sem inferência automática de pertencimento.</p>
+            </div>
+            <span className="rounded-full bg-violet-400/10 px-4 py-2 text-sm font-semibold text-violet-300">
+              {organizations.length} vinculada(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-3">
+          {organizations.length === 0 ? (
+            <p className="text-slate-500">Nenhuma organização explicitamente vinculada foi localizada.</p>
+          ) : organizations.map((organization) => (
+            <article key={organization.linkRecordId} className="rounded-2xl border border-violet-400/20 bg-slate-950/50 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-300">
+                    {organization.organizationType || "Organização"}
+                  </p>
+                  <h4 className="mt-3 text-xl font-semibold text-white">{organization.name}</h4>
+                  {organization.acronym ? <p className="mt-1 text-sm text-slate-400">{organization.acronym}</p> : null}
+                </div>
+                <span className="rounded-full border border-violet-400/20 px-3 py-1.5 text-xs text-violet-200">
+                  {organization.organizationStatus || "Situação não informada"}
+                </span>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <OrganizationInfo label="Função ou posição" value={organization.role} />
+                <OrganizationInfo label="Tipo de vínculo" value={organization.relationshipType} />
+                <OrganizationInfo label="Situação da informação" value={organization.informationStatus} />
+                <OrganizationInfo label="Confiabilidade" value={organization.confidence} />
+                <OrganizationInfo label="Verificação" value={organization.verificationStatus} />
+                <OrganizationInfo label="Fonte" value={organization.source} />
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: somente vínculos explícitos e metadados mínimos são exibidos; observações e evidências não são enviadas ao navegador.
+        </p>
+      </section>
+
       <section>
         <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
         <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
@@ -525,6 +586,15 @@ function openStreetMapEmbedUrl(latitude: number, longitude: number) {
   ].join(",");
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function OrganizationInfo({ label, value }: { label: string; value: string | null }) {
+  return (
+    <p>
+      <span className="block text-xs text-slate-600">{label}</span>
+      <span className="text-sm text-slate-300">{value || "Não informado"}</span>
+    </p>
+  );
 }
 
 function OccurrenceInfo({ label, value }: { label: string; value: string | null }) {
