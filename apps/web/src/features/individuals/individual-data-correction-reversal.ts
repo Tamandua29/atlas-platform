@@ -46,11 +46,11 @@ type ReversalReviewFields = {
 };
 
 type IndividualFields = {
-  "Nome Completo"?: string;
-  "Data de Nascimento"?: string;
-  Mãe?: string;
-  CPF?: string;
-  "Registro Geral"?: string;
+  "Nome Completo"?: string | null;
+  "Data de Nascimento"?: string | null;
+  Mãe?: string | null;
+  CPF?: string | null;
+  "Registro Geral"?: string | null;
 };
 
 export type ReversalResult = {
@@ -131,8 +131,8 @@ function parseSnapshot(raw: string | undefined): StableValues {
 function snapshotPatch(
   snapshot: StableValues,
   keys: ProposalKey[],
-): Partial<Record<keyof IndividualFields, string | null>> {
-  const patch: Partial<Record<keyof IndividualFields, string | null>> = {};
+): Partial<IndividualFields> {
+  const patch: Partial<IndividualFields> = {};
   if (keys.includes("legalName")) patch["Nome Completo"] = snapshot.legalName;
   if (keys.includes("birthDate")) patch["Data de Nascimento"] = snapshot.birthDate;
   if (keys.includes("motherName")) patch.Mãe = snapshot.motherName;
