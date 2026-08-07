@@ -15,12 +15,32 @@ describe("AuditEntry", () => {
     expect(audit.processedCount).toBe(5);
   });
 
-  it("rejeita metadado sensível", () => {
+  it("aceita contagem operacional cujo nome contém as letras rg", () => {
+    const audit = AuditEntry.create({
+      action: "intelligence.individuals.profile",
+      outcome: "success",
+      occurredAt: new Date(),
+      metadata: { organizationCount: 1 },
+    });
+
+    expect(audit.metadata?.organizationCount).toBe(1);
+  });
+
+  it.each([
+    "cpf",
+    "maskedCpf",
+    "rg",
+    "documento",
+    "identityDocument",
+    "password",
+    "accessToken",
+    "sessionSecret",
+  ])("rejeita metadado sensível: %s", (key) => {
     expect(() => AuditEntry.create({
       action: "individuals.preview",
       outcome: "success",
       occurredAt: new Date(),
-      metadata: { cpf: "000" },
+      metadata: { [key]: "valor-protegido" },
     })).toThrow(ValidationError);
   });
 
