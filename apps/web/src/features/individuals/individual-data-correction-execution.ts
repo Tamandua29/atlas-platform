@@ -7,6 +7,10 @@ import {
   updateAirtableRecord,
 } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
+import {
+  assertDistinctActors,
+  correctionExecutionDisposition,
+} from "@/features/individuals/correction-workflow-policy";
 
 const REVIEW_TABLE_ID = "tblgtBw4wOvG4utaS";
 const CONFIRMATION_PHRASE = "APLICAR CORREÇÃO";
@@ -256,9 +260,11 @@ export async function executeApprovedCorrection(input: {
   if (!proposerId || !approverId) {
     throw new Error("A proposta não possui segregação completa entre proponente e aprovador.");
   }
-  if (input.executorId === proposerId || input.executorId === approverId) {
-    throw new Error("A execução exige uma terceira identidade diferente do proponente e do aprovador.");
-  }
+  assertDistinctActors([
+    { id: proposerId, label: "proponente" },
+    { id: approverId, label: "aprovador" },
+    { id: input.executorId, label: "executor" },
+  ]);
   if (fields["Situação da Execução"] === "Aplicada") {
     return {
       reviewId: input.reviewId,
@@ -270,9 +276,6 @@ export async function executeApprovedCorrection(input: {
       reconciled: true,
     };
   }
-  if (fields["Situação da Proposta"] !== "Aprovada") {
-    throw new Error("Somente propostas aprovadas podem ser executadas.");
-  }
 
   const issues = fields["Campos para Saneamento"]
     ?.split(/\r?\n/)
@@ -283,22 +286,28 @@ export async function executeApprovedCorrection(input: {
   const expectedSourceHash = fields["Hash da Versão de Origem"];
   const expectedAfterHash = fields["Hash Após Aplicação"];
 
-  if (
-    fields["Situação da Execução"] === "Aplicando"
-    || fields["Situação da Execução"] === "Falhou"
-  ) {
-    if (expectedAfterHash && currentHash === expectedAfterHash) {
-      return finalizeExecution({
-        context,
-        executorId: input.executorId,
-        executedAt: input.executedAt,
-        reconciled: true,
-      });
-    }
+  const disposition = correctionExecutionDisposition({
+    proposalStatus: fields["Situação da Proposta"],
+    executionStatus: fields["Situação da Execução"],
+    currentHash,
+    sourceHash: expectedSourceHash,
+    afterHash: expectedAfterHash,
+  });
+  if (disposition === "reconcile") {
+    return finalizeExecution({
+      context,
+      executorId: input.executorId,
+      executedAt: input.executedAt,
+      reconciled: true,
+    });
+  }
+  if (disposition === "blocked-interrupted") {
     throw new Error("Existe uma execução interrompida que exige reconciliação técnica antes de nova tentativa.");
   }
-
-  if (!expectedSourceHash || currentHash !== expectedSourceHash) {
+  if (disposition === "blocked-state") {
+    throw new Error("Somente propostas aprovadas podem ser executadas.");
+  }
+  if (disposition === "blocked-version") {
     throw new Error("O cadastro mudou após a proposta. A execução foi bloqueada por conflito de versão.");
   }
 
