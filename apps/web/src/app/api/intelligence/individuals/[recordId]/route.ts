@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
+import { listAddressesForIndividual } from "@/features/intelligence/individual-addresses";
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,11 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const individual = await getIndividualDirectoryEntry(recordId);
+    const [individual, addresses] = await Promise.all([
+      getIndividualDirectoryEntry(recordId),
+      listAddressesForIndividual(recordId),
+    ]);
+
     if (!individual) {
       return NextResponse.json(
         { success: false, correlationId, message: "Indivíduo não encontrado." },
@@ -31,18 +36,25 @@ export async function GET(
       outcome: "success",
       occurredAt: new Date(),
       correlationId,
-      processedCount: 1,
-      successCount: 1,
+      processedCount: 1 + addresses.length,
+      successCount: 1 + addresses.length,
       metadata: {
         actorId: authorization.session.actorId,
         actorRole: authorization.session.role,
         recordId,
+        addressCount: addresses.length,
         mode: "protected-individual-profile",
       },
     }));
 
     return NextResponse.json(
-      { success: true, auditPersisted, correlationId, individual },
+      {
+        success: true,
+        auditPersisted,
+        correlationId,
+        individual,
+        relationships: { addresses },
+      },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {
