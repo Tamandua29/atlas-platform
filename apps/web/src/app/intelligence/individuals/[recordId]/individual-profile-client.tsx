@@ -106,17 +106,31 @@ type Organization = {
   verificationStatus: string | null;
 };
 
+type PersonalRelationship = {
+  relationshipRecordId: string;
+  counterpartRecordId: string;
+  counterpartName: string;
+  counterpartAlias: string | null;
+  direction: "origin" | "destination";
+  relationshipType: string;
+  confidence: string | null;
+  verificationStatus: string | null;
+  informationDate: string | null;
+  riskCategory: string | null;
+  informationClassification: string | null;
+  sourceRegistered: boolean;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
-  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[]; organizations?: Organization[] };
+  relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[]; organizations?: Organization[]; personalRelationships?: PersonalRelationship[] };
   message?: string;
 };
 
 const sections = [
   ["Relatórios", "Documentos e análises vinculadas"],
-  ["Vínculos", "Comparsas e conexões entre entidades"],
   ["Linha do tempo", "Eventos ordenados cronologicamente"],
 ] as const;
 
@@ -129,6 +143,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [personalRelationships, setPersonalRelationships] = useState<PersonalRelationship[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -152,6 +167,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setPhotos(payload.relationships?.photos || []);
           setOccurrences(payload.relationships?.occurrences || []);
           setOrganizations(payload.relationships?.organizations || []);
+          setPersonalRelationships(payload.relationships?.personalRelationships || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -545,6 +561,57 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Vínculos entre pessoas</h3>
+              <p className="mt-2 text-slate-400">Relações explicitamente registradas na fonte, sem inferência automática.</p>
+            </div>
+            <span className="rounded-full bg-sky-400/10 px-4 py-2 text-sm font-semibold text-sky-300">
+              {personalRelationships.length} vinculado(s)
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-3">
+          {personalRelationships.length === 0 ? (
+            <p className="text-slate-500">Nenhum vínculo explícito entre pessoas foi localizado.</p>
+          ) : personalRelationships.map((relationship) => (
+            <article key={relationship.relationshipRecordId} className="rounded-2xl border border-sky-400/20 bg-slate-950/50 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-300">
+                    {relationship.relationshipType}
+                  </p>
+                  <h4 className="mt-3 text-xl font-semibold text-white">{relationship.counterpartName}</h4>
+                  {relationship.counterpartAlias ? <p className="mt-1 text-sm text-slate-400">{relationship.counterpartAlias}</p> : null}
+                </div>
+                <span className="rounded-full border border-sky-400/20 px-3 py-1.5 text-xs text-sky-200">
+                  {relationship.direction === "origin" ? "Origem → destino" : "Destino ← origem"}
+                </span>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <RelationshipInfo label="Confiabilidade" value={relationship.confidence} />
+                <RelationshipInfo label="Verificação" value={relationship.verificationStatus} />
+                <RelationshipInfo label="Data da informação" value={relationship.informationDate} />
+                <RelationshipInfo label="Categoria de risco" value={relationship.riskCategory} />
+                <RelationshipInfo label="Classificação" value={relationship.informationClassification} />
+                <RelationshipInfo label="Fonte" value={relationship.sourceRegistered ? "Referência registrada" : null} />
+              </div>
+              <a
+                href={`/intelligence/individuals/${relationship.counterpartRecordId}`}
+                className="mt-5 inline-flex rounded-xl border border-sky-400/30 px-4 py-2.5 font-semibold text-sky-200 hover:bg-sky-400/10"
+              >
+                Abrir ficha relacionada
+              </a>
+            </article>
+          ))}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: descrições, observações, resumos de IA e identificação da fonte não são enviados ao navegador. O vínculo não confirma participação criminal.
+        </p>
+      </section>
+
       <section>
         <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
         <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
@@ -586,6 +653,15 @@ function openStreetMapEmbedUrl(latitude: number, longitude: number) {
   ].join(",");
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function RelationshipInfo({ label, value }: { label: string; value: string | null }) {
+  return (
+    <p>
+      <span className="block text-xs text-slate-600">{label}</span>
+      <span className="text-sm text-slate-300">{value || "Não informado"}</span>
+    </p>
+  );
 }
 
 function OrganizationInfo({ label, value }: { label: string; value: string | null }) {
