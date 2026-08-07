@@ -227,6 +227,8 @@ export function ReviewQueueClient() {
     return () => {
       cancelled = true;
     };
+    // Session restoration is intentionally performed only once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function authenticateAndLoad() {
