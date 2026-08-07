@@ -60,12 +60,13 @@ export async function listPhotosForIndividual(
         "Indivíduos Relacionados",
         "Registro Ativo",
       ],
-      filterByFormula: `AND({Registro Ativo}=TRUE(),FIND(",${recordId},",","&ARRAYJOIN({Indivíduos Relacionados},",")&",")>0)`,
       maxRecords: 100,
     },
   );
 
   return records.flatMap((record) => {
+    if (record.fields["Registro Ativo"] === false) return [];
+    if (!record.fields["Indivíduos Relacionados"]?.includes(recordId)) return [];
     const type = record.fields["Tipo de Evidência"]?.trim();
     if (!type || !allowedEvidenceTypes.has(type)) return [];
 
