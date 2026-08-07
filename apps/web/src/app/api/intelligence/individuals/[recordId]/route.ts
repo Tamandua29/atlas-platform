@@ -12,6 +12,7 @@ import { listRelationshipsForIndividual } from "@/features/intelligence/individu
 import { listPhonesForIndividual } from "@/features/intelligence/individual-phones";
 import { listPhotosForIndividual } from "@/features/intelligence/individual-photos";
 import { listVehiclesForIndividual } from "@/features/intelligence/individual-vehicles";
+import { buildIndividualTimeline } from "@/features/intelligence/individual-timeline";
 import { listWarrantsForIndividual } from "@/features/intelligence/individual-warrants";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,16 @@ export async function GET(
       );
     }
 
+    const timeline = buildIndividualTimeline({
+      occurrences,
+      warrants,
+      documents,
+      photos,
+      vehicles,
+      phones,
+      personalRelationships,
+    });
+
     const relationshipCount = addresses.length
       + phones.length
       + vehicles.length
@@ -88,6 +99,7 @@ export async function GET(
         organizationCount: organizations.length,
         personalRelationshipCount: personalRelationships.length,
         documentCount: documents.length,
+        timelineEventCount: timeline.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -98,6 +110,7 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
+        timeline,
         relationships: {
           addresses,
           phones,
