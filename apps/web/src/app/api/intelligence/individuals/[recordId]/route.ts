@@ -5,6 +5,7 @@ import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { listAddressesForIndividual } from "@/features/intelligence/individual-addresses";
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
+import { listPhonesForIndividual } from "@/features/intelligence/individual-phones";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,10 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [individual, addresses] = await Promise.all([
+    const [individual, addresses, phones] = await Promise.all([
       getIndividualDirectoryEntry(recordId),
       listAddressesForIndividual(recordId),
+      listPhonesForIndividual(recordId),
     ]);
 
     if (!individual) {
@@ -31,18 +33,20 @@ export async function GET(
       );
     }
 
+    const relationshipCount = addresses.length + phones.length;
     const auditPersisted = await persistAuditSafely(AuditEntry.create({
       action: "intelligence.individuals.profile",
       outcome: "success",
       occurredAt: new Date(),
       correlationId,
-      processedCount: 1 + addresses.length,
-      successCount: 1 + addresses.length,
+      processedCount: 1 + relationshipCount,
+      successCount: 1 + relationshipCount,
       metadata: {
         actorId: authorization.session.actorId,
         actorRole: authorization.session.role,
         recordId,
         addressCount: addresses.length,
+        phoneCount: phones.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -53,7 +57,7 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
-        relationships: { addresses },
+        relationships: { addresses, phones },
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
