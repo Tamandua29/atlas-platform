@@ -7,6 +7,10 @@ import {
   updateAirtableRecord,
 } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
+import {
+  assertDistinctActors,
+  reversalExecutionDisposition,
+} from "@/features/individuals/correction-workflow-policy";
 
 const REVIEW_TABLE_ID = "tblgtBw4wOvG4utaS";
 const CONFIRMATION_PHRASE = "REVERTER CORREÇÃO";
@@ -281,9 +285,11 @@ export async function decideCorrectionReversal(input: {
   }
   const requesterId = fields["Solicitante da Reversão"]?.trim();
   if (!requesterId) throw new Error("A solicitação não possui identidade responsável.");
-  if (input.approverId === requesterId || input.approverId === fields["Executor Técnico"]) {
-    throw new Error("A decisão exige identidade distinta do solicitante e do executor original.");
-  }
+  assertDistinctActors([
+    { id: requesterId, label: "solicitante da reversão" },
+    { id: fields["Executor Técnico"], label: "executor original" },
+    { id: input.approverId, label: "aprovador da reversão" },
+  ]);
   const reason = validateReason(input.reason, "A justificativa da reversão");
   const status = input.decision === "approve" ? "Aprovada" : "Rejeitada";
   await updateAirtableRecord<ReversalReviewFields>(
@@ -351,11 +357,6 @@ export async function executeCorrectionReversal(input: {
   if (fields["Situação da Reversão"] === "Revertida") {
     return result(fields, 0, true);
   }
-  if (fields["Situação da Reversão"] !== "Aprovada"
-    && fields["Situação da Reversão"] !== "Revertendo"
-    && fields["Situação da Reversão"] !== "Falhou") {
-    throw new Error("Somente uma reversão aprovada pode ser executada.");
-  }
   if (fields["Aprovador da Reversão"] !== input.executorId) {
     throw new Error("A reversão deve ser executada pela identidade segregada que a aprovou.");
   }
@@ -368,10 +369,13 @@ export async function executeCorrectionReversal(input: {
   }
 
   const currentHash = await hashFields(context.individual.fields);
-  if (
-    (fields["Situação da Reversão"] === "Revertendo" || fields["Situação da Reversão"] === "Falhou")
-    && currentHash === expectedRevertedHash
-  ) {
+  const disposition = reversalExecutionDisposition({
+    reversalStatus: fields["Situação da Reversão"],
+    currentHash,
+    appliedHash: fields["Hash Após Aplicação"],
+    revertedHash: expectedRevertedHash,
+  });
+  if (disposition === "reconcile") {
     return finalizeReversal({
       context,
       executorId: input.executorId,
@@ -381,7 +385,10 @@ export async function executeCorrectionReversal(input: {
       reconciled: true,
     });
   }
-  if (!fields["Hash Após Aplicação"] || currentHash !== fields["Hash Após Aplicação"]) {
+  if (disposition === "blocked-state") {
+    throw new Error("Somente uma reversão aprovada pode ser executada.");
+  }
+  if (disposition === "blocked-version") {
     throw new Error("O cadastro mudou após a correção. A reversão foi bloqueada por conflito de versão.");
   }
 
