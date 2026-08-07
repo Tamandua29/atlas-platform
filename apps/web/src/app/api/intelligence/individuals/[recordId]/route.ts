@@ -6,6 +6,7 @@ import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { listAddressesForIndividual } from "@/features/intelligence/individual-addresses";
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
 import { listPhonesForIndividual } from "@/features/intelligence/individual-phones";
+import { listPhotosForIndividual } from "@/features/intelligence/individual-photos";
 import { listVehiclesForIndividual } from "@/features/intelligence/individual-vehicles";
 import { listWarrantsForIndividual } from "@/features/intelligence/individual-warrants";
 
@@ -22,12 +23,13 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [individual, addresses, phones, vehicles, warrants] = await Promise.all([
+    const [individual, addresses, phones, vehicles, warrants, photos] = await Promise.all([
       getIndividualDirectoryEntry(recordId),
       listAddressesForIndividual(recordId),
       listPhonesForIndividual(recordId),
       listVehiclesForIndividual(recordId),
       listWarrantsForIndividual(recordId),
+      listPhotosForIndividual(recordId),
     ]);
 
     if (!individual) {
@@ -40,7 +42,8 @@ export async function GET(
     const relationshipCount = addresses.length
       + phones.length
       + vehicles.length
-      + warrants.length;
+      + warrants.length
+      + photos.length;
 
     const auditPersisted = await persistAuditSafely(AuditEntry.create({
       action: "intelligence.individuals.profile",
@@ -57,6 +60,7 @@ export async function GET(
         phoneCount: phones.length,
         vehicleCount: vehicles.length,
         warrantCount: warrants.length,
+        photoCount: photos.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -67,7 +71,7 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
-        relationships: { addresses, phones, vehicles, warrants },
+        relationships: { addresses, phones, vehicles, warrants, photos },
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
