@@ -85,7 +85,7 @@ export async function listAddressesForIndividual(
   const configuration = getAirtableConfiguration();
   const records = await listAllAirtableRecords<AddressFields>(
     configuration.addressesTableId,
-    { baseId: configuration.baseId },
+    { baseId: configuration.individualsPreviewBaseId },
   );
 
   return records
