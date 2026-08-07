@@ -21,6 +21,15 @@ type Context = {
   executionStatus: string | null;
   executorId: string | null;
   executedAt: string | null;
+  reversalStatus: string | null;
+  reversalRequesterId: string | null;
+  reversalReason: string | null;
+  reversalRequestedAt: string | null;
+  reversalApproverId: string | null;
+  reversalDecisionReason: string | null;
+  reversalDecidedAt: string | null;
+  reversalExecutorId: string | null;
+  revertedAt: string | null;
 };
 
 const labels: Record<ProposalKey, string> = {
@@ -49,6 +58,11 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
   const [executionNote, setExecutionNote] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [executing, setExecuting] = useState(false);
+  const [reversalReason, setReversalReason] = useState("");
+  const [reversalDecisionReason, setReversalDecisionReason] = useState("");
+  const [reversalNote, setReversalNote] = useState("");
+  const [reversalConfirmation, setReversalConfirmation] = useState("");
+  const [reversing, setReversing] = useState(false);
   const [auditPersisted, setAuditPersisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -205,6 +219,73 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
     }
   }
 
+  async function submitReversal(
+    action: "request" | "decide" | "execute",
+    decision?: "approve" | "reject",
+  ) {
+    const reason = action === "request" ? reversalReason : reversalDecisionReason;
+    if (action !== "execute" && reason.trim().length < 10) {
+      setError("A fundamentação da reversão deve possuir pelo menos 10 caracteres.");
+      return;
+    }
+    if (action === "execute") {
+      if (reversalNote.trim().length < 10) {
+        setError("A nota da reversão deve possuir pelo menos 10 caracteres.");
+        return;
+      }
+      if (reversalConfirmation.trim() !== "REVERTER CORREÇÃO") {
+        setError("Digite exatamente REVERTER CORREÇÃO para confirmar.");
+        return;
+      }
+    }
+
+    setReversing(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(
+        `/api/data-quality/correction-requests/${reviewId}/proposal/reversal`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action,
+            decision,
+            reason: reason.trim(),
+            note: reversalNote.trim(),
+            confirmation: reversalConfirmation.trim(),
+          }),
+        },
+      );
+      const payload = await response.json() as {
+        success?: boolean;
+        reversalStatus?: string;
+        sourceWritesPerformed?: number;
+        reconciled?: boolean;
+        message?: string;
+      };
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message ?? "Não foi possível concluir a etapa de reversão.");
+      }
+      setReversalReason("");
+      setReversalDecisionReason("");
+      setReversalNote("");
+      setReversalConfirmation("");
+      setMessage(
+        action === "request"
+          ? "Reversão solicitada e encaminhada para decisão humana. Nenhuma escrita foi realizada."
+          : action === "decide"
+            ? `Reversão ${decision === "approve" ? "aprovada" : "rejeitada"} por identidade segregada.`
+            : `Snapshot anterior restaurado e auditado. Escritas controladas: ${payload.sourceWritesPerformed ?? 0}.`,
+      );
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+    } finally {
+      setReversing(false);
+    }
+  }
+
   useEffect(() => {
     void load();
   }, [reviewId]);
@@ -224,7 +305,7 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
           <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-emerald-200">
             {auditPersisted ? "Consulta auditada" : "Auditoria pendente"}
           </span>
-          <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-amber-200">0 escritas na origem</span>
+          <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-amber-200">{context?.executionStatus === "Aplicada" ? "1 escrita controlada na origem" : "0 escritas na origem"}</span>
           {context?.proposalStatus && <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-cyan-200">{context.proposalStatus}</span>}
         </div>
       </section>
@@ -400,6 +481,153 @@ export function CorrectionProposalClient({ reviewId }: { reviewId: string }) {
                 <p className="mt-2 text-xs">Executor: {context.executorId ?? "Não identificado"}</p>
                 <p className="mt-2 text-xs">Execução: {context.executedAt ?? "Data não informada"}</p>
                 <p className="mt-2 text-xs text-emerald-100/70">Snapshot anterior e hashes preservados para auditoria e recuperação.</p>
+              </div>
+            </div>
+          )}
+
+          {(context.executionStatus === "Aplicada" || context.proposalStatus === "Aplicada") && (
+            <div className="border-t border-slate-800 p-5">
+              <div className="rounded-2xl border border-amber-400/20 bg-slate-950/45 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+                  Reversão controlada e reconciliação
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  A restauração usa somente o snapshot preservado e é bloqueada se o cadastro tiver sofrido qualquer alteração posterior.
+                </p>
+
+                {!context.reversalStatus && (
+                  actorId === context.executorId ? (
+                    <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-200">
+                      O executor original não pode solicitar a reversão da própria escrita. Autentique uma identidade revisora segregada.
+                    </div>
+                  ) : canWrite ? (
+                    <div className="mt-4">
+                      <textarea
+                        rows={3}
+                        maxLength={1000}
+                        value={reversalReason}
+                        onChange={(event) => setReversalReason(event.target.value)}
+                        placeholder="Fundamente por que o snapshot anterior deve ser restaurado."
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                      />
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          type="button"
+                          disabled={reversing}
+                          onClick={() => void submitReversal("request")}
+                          className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-3 text-sm font-semibold text-amber-200 disabled:opacity-60"
+                        >
+                          Solicitar reversão
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-slate-500">A solicitação exige perfil Revisor.</p>
+                  )
+                )}
+
+                {context.reversalStatus === "Pendente de aprovação" && (
+                  <div className="mt-4">
+                    <div className="rounded-xl border border-slate-700 p-4 text-sm text-slate-300">
+                      <p className="font-semibold">Reversão pendente de aprovação</p>
+                      <p className="mt-2 text-xs">Solicitante: {context.reversalRequesterId ?? "Não identificado"}</p>
+                      <p className="mt-2">{context.reversalReason}</p>
+                    </div>
+                    {actorId === context.reversalRequesterId || actorId === context.executorId ? (
+                      <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-200">
+                        A decisão exige identidade distinta do solicitante e do executor original.
+                      </div>
+                    ) : canWrite && (
+                      <>
+                        <textarea
+                          rows={3}
+                          maxLength={1000}
+                          value={reversalDecisionReason}
+                          onChange={(event) => setReversalDecisionReason(event.target.value)}
+                          placeholder="Fundamente a aprovação ou rejeição da reversão."
+                          className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                        />
+                        <div className="mt-4 flex flex-wrap justify-end gap-3">
+                          <button
+                            type="button"
+                            disabled={reversing}
+                            onClick={() => void submitReversal("decide", "reject")}
+                            className="rounded-xl border border-rose-400/30 bg-rose-400/10 px-5 py-3 text-sm font-semibold text-rose-200 disabled:opacity-60"
+                          >
+                            Rejeitar reversão
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reversing}
+                            onClick={() => void submitReversal("decide", "approve")}
+                            className="rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                          >
+                            Aprovar reversão
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {(context.reversalStatus === "Aprovada"
+                  || context.reversalStatus === "Revertendo"
+                  || context.reversalStatus === "Falhou") && (
+                  actorId === context.reversalApproverId ? (
+                    <div className="mt-4">
+                      <p className="text-sm text-amber-100">
+                        Reversão aprovada. O hash atual será conferido antes de qualquer escrita.
+                      </p>
+                      <textarea
+                        rows={3}
+                        maxLength={1000}
+                        value={reversalNote}
+                        onChange={(event) => setReversalNote(event.target.value)}
+                        placeholder="Registre a nota operacional da restauração."
+                        className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-rose-400"
+                      />
+                      <label htmlFor="reversal-confirmation" className="mt-4 block text-xs text-slate-500">
+                        Para confirmar, digite: <strong className="text-rose-200">REVERTER CORREÇÃO</strong>
+                      </label>
+                      <input
+                        id="reversal-confirmation"
+                        value={reversalConfirmation}
+                        onChange={(event) => setReversalConfirmation(event.target.value)}
+                        autoComplete="off"
+                        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-rose-400"
+                      />
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          type="button"
+                          disabled={reversing}
+                          onClick={() => void submitReversal("execute")}
+                          className="rounded-xl bg-rose-400 px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
+                        >
+                          {reversing ? "Verificando e restaurando..." : "Restaurar snapshot anterior"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-200">
+                      A execução cabe exclusivamente à identidade segregada que aprovou esta reversão.
+                    </div>
+                  )
+                )}
+
+                {context.reversalStatus === "Rejeitada" && (
+                  <div className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/10 p-4 text-sm text-rose-200">
+                    <p className="font-semibold">Reversão rejeitada</p>
+                    <p className="mt-2">{context.reversalDecisionReason}</p>
+                  </div>
+                )}
+
+                {context.reversalStatus === "Revertida" && (
+                  <div className="mt-4 rounded-xl border border-cyan-400/25 bg-cyan-400/10 p-4 text-sm text-cyan-100">
+                    <p className="font-semibold">Snapshot anterior restaurado e reconciliado</p>
+                    <p className="mt-2 text-xs">Executor: {context.reversalExecutorId ?? "Não identificado"}</p>
+                    <p className="mt-2 text-xs">Reversão: {context.revertedAt ?? "Data não informada"}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
