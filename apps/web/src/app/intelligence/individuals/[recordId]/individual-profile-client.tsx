@@ -135,17 +135,23 @@ type Document = {
   evidenceReferenceCount: number;
 };
 
+type TimelineEvent = {
+  id: string;
+  occurredAt: string;
+  category: "occurrence" | "warrant" | "document" | "photo" | "vehicle" | "phone" | "relationship";
+  title: string;
+  summary: string | null;
+};
+
 type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   individual?: Individual;
+  timeline?: TimelineEvent[];
   relationships?: { addresses?: Address[]; phones?: Phone[]; vehicles?: Vehicle[]; warrants?: Warrant[]; photos?: Photo[]; occurrences?: Occurrence[]; organizations?: Organization[]; personalRelationships?: PersonalRelationship[]; documents?: Document[] };
   message?: string;
 };
 
-const sections = [
-  ["Linha do tempo", "Eventos ordenados cronologicamente"],
-] as const;
 
 export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [individual, setIndividual] = useState<Individual | null>(null);
@@ -158,6 +164,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [personalRelationships, setPersonalRelationships] = useState<PersonalRelationship[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [message, setMessage] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -183,6 +190,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           setOrganizations(payload.relationships?.organizations || []);
           setPersonalRelationships(payload.relationships?.personalRelationships || []);
           setDocuments(payload.relationships?.documents || []);
+          setTimeline(payload.timeline || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setMessage("");
         })
@@ -672,21 +680,60 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section>
-        <h3 className="text-2xl font-semibold text-white">Outras informações relacionadas</h3>
-        <p className="mt-2 text-slate-400">Os próximos vínculos serão conectados progressivamente a esta ficha.</p>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {sections.map(([title, description]) => (
-            <article key={title} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-              <h4 className="font-semibold text-cyan-300">{title}</h4>
-              <p className="mt-2 text-sm text-slate-400">{description}</p>
-              <p className="mt-5 text-xs uppercase tracking-[0.14em] text-slate-600">Integração seguinte</p>
-            </article>
-          ))}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="border-b border-slate-800 p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-semibold text-white">Linha do tempo</h3>
+              <p className="mt-2 text-slate-400">Eventos datados e ordenados cronologicamente a partir dos vínculos autorizados.</p>
+            </div>
+            <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-300">
+              {timeline.length} evento(s)
+            </span>
+          </div>
         </div>
+        <div className="p-6">
+          {timeline.length === 0 ? (
+            <p className="text-slate-500">Nenhum evento com data válida foi localizado.</p>
+          ) : (
+            <ol className="relative ml-3 border-l border-cyan-400/25">
+              {timeline.map((event) => (
+                <li key={event.id} className="relative pb-8 pl-8 last:pb-0">
+                  <span className="absolute -left-2 top-1.5 h-4 w-4 rounded-full border-4 border-slate-900 bg-cyan-400" />
+                  <time className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-400">
+                    {formatDateTime(event.occurredAt)}
+                  </time>
+                  <div className="mt-2 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      {timelineCategoryLabel(event.category)}
+                    </p>
+                    <h4 className="mt-2 font-semibold text-white">{event.title}</h4>
+                    {event.summary ? <p className="mt-2 text-sm text-slate-400">{event.summary}</p> : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+        <p className="border-t border-slate-800 px-6 py-4 text-xs text-amber-300">
+          Proteção ativa: somente eventos com data válida e metadados mínimos são exibidos; narrativas, anexos e dados documentais integrais permanecem protegidos.
+        </p>
       </section>
     </div>
   );
+}
+
+function timelineCategoryLabel(category: TimelineEvent["category"]) {
+  const labels: Record<TimelineEvent["category"], string> = {
+    occurrence: "Ocorrência",
+    warrant: "Mandado",
+    document: "Documento",
+    photo: "Fotografia",
+    vehicle: "Veículo",
+    phone: "Telefone",
+    relationship: "Vínculo pessoal",
+  };
+  return labels[category];
 }
 
 function formatDateTime(value: string) {
