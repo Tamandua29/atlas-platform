@@ -14,7 +14,10 @@ export default function DataQualityPage() {
               <h1 className="mt-1 text-lg font-semibold text-white">Qualidade dos dados de identificação</h1>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link href="/data-quality/reconciliation" className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-200">
+              Reconciliação
+            </Link>
             <Link href="/data-quality/queue" className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200">
               Fila de saneamento
             </Link>
