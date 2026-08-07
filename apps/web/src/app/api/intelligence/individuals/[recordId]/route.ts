@@ -7,6 +7,7 @@ import { listAddressesForIndividual } from "@/features/intelligence/individual-a
 import { getIndividualDirectoryEntry } from "@/features/intelligence/individual-directory";
 import { listPhonesForIndividual } from "@/features/intelligence/individual-phones";
 import { listVehiclesForIndividual } from "@/features/intelligence/individual-vehicles";
+import { listWarrantsForIndividual } from "@/features/intelligence/individual-warrants";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,12 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [individual, addresses, phones, vehicles] = await Promise.all([
+    const [individual, addresses, phones, vehicles, warrants] = await Promise.all([
       getIndividualDirectoryEntry(recordId),
       listAddressesForIndividual(recordId),
       listPhonesForIndividual(recordId),
       listVehiclesForIndividual(recordId),
+      listWarrantsForIndividual(recordId),
     ]);
 
     if (!individual) {
@@ -35,7 +37,11 @@ export async function GET(
       );
     }
 
-    const relationshipCount = addresses.length + phones.length + vehicles.length;
+    const relationshipCount = addresses.length
+      + phones.length
+      + vehicles.length
+      + warrants.length;
+
     const auditPersisted = await persistAuditSafely(AuditEntry.create({
       action: "intelligence.individuals.profile",
       outcome: "success",
@@ -50,6 +56,7 @@ export async function GET(
         addressCount: addresses.length,
         phoneCount: phones.length,
         vehicleCount: vehicles.length,
+        warrantCount: warrants.length,
         mode: "protected-individual-profile",
       },
     }));
@@ -60,7 +67,7 @@ export async function GET(
         auditPersisted,
         correlationId,
         individual,
-        relationships: { addresses, phones, vehicles },
+        relationships: { addresses, phones, vehicles, warrants },
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
