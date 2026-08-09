@@ -6,11 +6,14 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { MANAUS_CENTER } from "@/features/operational-map/operational-map.data";
 import { isCoordinateConsistentWithNeighborhood } from "@/features/operational-map/geographic-consistency";
+import { DEMO_OPERATIONAL_ZONES } from "@/features/operational-map/operational-map.zones";
+import { useOperationalZones } from "@/features/operational-map/use-operational-zones";
 
 import type {
   OperationalEntity,
   OperationalEntityType,
   OperationalLayerVisibility,
+  OperationalZone,
 } from "@/features/operational-map/operational-map.types";
 
 import { useOperationalEntities } from "./hooks/use-operational-entities";
@@ -18,6 +21,7 @@ import { useOperationalMarkers } from "./hooks/use-operational-markers";
 import { MapStatusOverlays } from "./overlays/map-status-overlays";
 import { EntityDetailsPanel } from "./panels/entity-details-panel";
 import { OperationalLayersPanel } from "./panels/operational-layers-panel";
+import { OperationalZonesPanel } from "./panels/operational-zones-panel";
 import { OperationalEntitiesProvider } from "./providers/operational-entities-provider";
 
 type MapStatus = "loading" | "ready" | "error";
@@ -82,6 +86,10 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
+  const [zonesEnabled, setZonesEnabled] = useState(false);
+
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+
   const [focusedEntities, setFocusedEntities] = useState<OperationalEntity[]>(
     [],
   );
@@ -112,6 +120,12 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
   const selectedEntity = useMemo(
     () => allEntities.find((entity) => entity.id === selectedEntityId) ?? null,
     [allEntities, selectedEntityId],
+  );
+
+  const selectedZone = useMemo(
+    () =>
+      DEMO_OPERATIONAL_ZONES.find((zone) => zone.id === selectedZoneId) ?? null,
+    [selectedZoneId],
   );
 
   const visibleEntities = useMemo(
@@ -372,6 +386,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   const selectEntity = useCallback(
     (entity: OperationalEntity) => {
+      setSelectedZoneId(null);
       setSelectedEntityId(entity.id);
 
       if (!map) {
@@ -389,6 +404,22 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     },
     [map],
   );
+
+  const selectZone = useCallback((zone: OperationalZone | null) => {
+    setSelectedZoneId(zone?.id ?? null);
+
+    if (zone) {
+      setSelectedEntityId(null);
+    }
+  }, []);
+
+  const operationalZoneController = useOperationalZones({
+    map,
+    zones: DEMO_OPERATIONAL_ZONES,
+    enabled: expanded && zonesEnabled && mapStatus === "ready",
+    selectedZoneId,
+    onSelectZone: selectZone,
+  });
 
   useOperationalMarkers({
     map,
@@ -433,6 +464,16 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   function closeDetails() {
     setSelectedEntityId(null);
+  }
+
+  function toggleZones() {
+    setZonesEnabled((current) => {
+      if (current) {
+        setSelectedZoneId(null);
+      }
+
+      return !current;
+    });
   }
 
   function centerSelectedEntity() {
@@ -501,6 +542,19 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
           entity={selectedEntity}
           onClose={closeDetails}
           onCenter={centerSelectedEntity}
+        />
+      )}
+
+      {expanded && !selectedEntity && (
+        <OperationalZonesPanel
+          enabled={zonesEnabled}
+          zones={DEMO_OPERATIONAL_ZONES}
+          selectedZone={selectedZone}
+          onToggle={toggleZones}
+          onSelect={selectZone}
+          onFitAll={operationalZoneController.fitAllZones}
+          onFitSelected={operationalZoneController.fitSelectedZone}
+          onClearSelection={operationalZoneController.clearSelection}
         />
       )}
 

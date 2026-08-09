@@ -2,6 +2,7 @@ import "server-only";
 
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
+import { classifyWarrantAttention } from "@/features/intelligence/warrant-monitoring";
 
 type WarrantFields = Record<string, unknown> & {
   "ID Mandado"?: string;
@@ -32,6 +33,13 @@ export type IndividualWarrant = {
 };
 
 export type OperationalWarrant = Omit<IndividualWarrant, "sources">;
+
+export type IndividualWarrantSummary = {
+  linkedCount: number;
+  activeCount: number;
+  expiringCount: number;
+  needsVerificationCount: number;
+};
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -124,4 +132,40 @@ export async function listWarrantsForIndividual(
   return records
     .filter((record) => linkedToIndividual(record.fields, individualRecordId))
     .map(toIndividualWarrant);
+}
+
+export async function summarizeWarrantsByIndividual(
+  individualRecordIds: string[],
+  now = new Date(),
+): Promise<Record<string, IndividualWarrantSummary>> {
+  const validIds = new Set(
+    individualRecordIds.filter((recordId) => /^rec[a-zA-Z0-9]+$/.test(recordId)),
+  );
+  const summaries = Object.fromEntries(
+    [...validIds].map((recordId) => [recordId, {
+      linkedCount: 0,
+      activeCount: 0,
+      expiringCount: 0,
+      needsVerificationCount: 0,
+    }]),
+  ) as Record<string, IndividualWarrantSummary>;
+
+  if (validIds.size === 0) return summaries;
+
+  const records = await loadWarrants();
+  for (const record of records) {
+    const warrant = toIndividualWarrant(record);
+    const attention = classifyWarrantAttention(warrant.status, warrant.expiresAt, now);
+
+    for (const recordId of validIds) {
+      if (!linkedToIndividual(record.fields, recordId)) continue;
+      const summary = summaries[recordId];
+      summary.linkedCount += 1;
+      if (attention === "active") summary.activeCount += 1;
+      if (attention === "expiring") summary.expiringCount += 1;
+      if (attention === "unknown") summary.needsVerificationCount += 1;
+    }
+  }
+
+  return summaries;
 }
