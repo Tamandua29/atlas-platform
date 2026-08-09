@@ -155,6 +155,62 @@ function getValidCoordinates(
   return [longitude, latitude];
 }
 
+type GeographicBounds = {
+  minLatitude: number;
+  maxLatitude: number;
+  minLongitude: number;
+  maxLongitude: number;
+};
+
+const MANAUS_NEIGHBORHOOD_BOUNDS: Record<
+  string,
+  GeographicBounds
+> = {
+  // Limite conservador para impedir que registros textualmente
+  // identificados como Japiim sejam exibidos na Zona Norte.
+  // Deve ser substituído futuramente pelo polígono oficial do bairro.
+  japiim: {
+    minLatitude: -3.17,
+    maxLatitude: -3.08,
+    minLongitude: -60.04,
+    maxLongitude: -59.93,
+  },
+};
+
+function normalizeGeographicName(
+  value: unknown,
+): string {
+  return normalizeText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function hasConsistentNeighborhoodCoordinates(
+  address: AirtableAddressFields,
+  coordinates: [longitude: number, latitude: number],
+): boolean {
+  const neighborhood =
+    normalizeGeographicName(address.Bairro);
+
+  const bounds =
+    MANAUS_NEIGHBORHOOD_BOUNDS[neighborhood];
+
+  if (!bounds) {
+    return true;
+  }
+
+  const [longitude, latitude] =
+    coordinates;
+
+  return (
+    latitude >= bounds.minLatitude &&
+    latitude <= bounds.maxLatitude &&
+    longitude >= bounds.minLongitude &&
+    longitude <= bounds.maxLongitude
+  );
+}
+
 function buildAddressLabel(
   address: AirtableAddressFields,
 ): string {
@@ -318,7 +374,13 @@ function mapOccurrenceToEntity(
     addressRecord.fields.Longitude,
   );
 
-  if (!coordinates) {
+  if (
+    !coordinates ||
+    !hasConsistentNeighborhoodCoordinates(
+      addressRecord.fields,
+      coordinates,
+    )
+  ) {
     return null;
   }
 
