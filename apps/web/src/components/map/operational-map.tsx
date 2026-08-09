@@ -30,6 +30,39 @@ type MapStatus =
   | "ready"
   | "error";
 
+type FocusedIndividualResponse = {
+  success: boolean;
+  individual?: {
+    recordId: string;
+    legalName: string;
+    alias: string | null;
+  };
+  relationships?: {
+    addresses?: Array<{
+      recordId: string;
+      label: string;
+      latitude: number | null;
+      longitude: number | null;
+    }>;
+  };
+};
+
+function hasValidCoordinates(
+  latitude: number | null,
+  longitude: number | null,
+) {
+  return (
+    typeof latitude === "number" &&
+    Number.isFinite(latitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    typeof longitude === "number" &&
+    Number.isFinite(longitude) &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
+
 const INITIAL_LAYER_VISIBILITY: OperationalLayerVisibility = {
   occurrence: true,
   person: true,
@@ -66,6 +99,13 @@ function OperationalMapContent() {
     setSelectedEntityId,
   ] = useState<string | null>(null);
 
+  const [
+    focusedEntity,
+    setFocusedEntity,
+  ] = useState<OperationalEntity | null>(
+    null,
+  );
+
   const {
     entities,
     status: entitiesStatus,
@@ -73,30 +113,46 @@ function OperationalMapContent() {
       entitiesErrorMessage,
     generatedAt,
     isLoading: entitiesAreLoading,
-    isEmpty,
     reload: reloadEntities,
   } = useOperationalEntities();
 
+  const allEntities = useMemo(() => {
+    if (
+      !focusedEntity ||
+      entities.some(
+        (entity) =>
+          entity.id === focusedEntity.id,
+      )
+    ) {
+      return entities;
+    }
+
+    return [
+      focusedEntity,
+      ...entities,
+    ];
+  }, [entities, focusedEntity]);
+
   const selectedEntity = useMemo(
     () =>
-      entities.find(
+      allEntities.find(
         (entity) =>
           entity.id ===
           selectedEntityId,
       ) ?? null,
     [
-      entities,
+      allEntities,
       selectedEntityId,
     ],
   );
 
   const visibleEntities = useMemo(
     () =>
-      entities.filter(
+      allEntities.filter(
         (entity) =>
           layers[entity.type],
       ),
-    [entities, layers],
+    [allEntities, layers],
   );
 
   const interfaceStatus: MapStatus =
@@ -287,6 +343,126 @@ function OperationalMapContent() {
     };
   }, [map]);
 
+  useEffect(() => {
+    const focusRecordId =
+      new URLSearchParams(
+        window.location.search,
+      ).get("focusRecordId");
+
+    if (
+      !focusRecordId ||
+      !/^[A-Za-z0-9_-]{3,80}$/.test(
+        focusRecordId,
+      )
+    ) {
+      return;
+    }
+
+    const abortController =
+      new AbortController();
+
+    async function loadFocusedIndividual() {
+      try {
+        const response = await fetch(
+          `/api/intelligence/individuals/${encodeURIComponent(
+            focusRecordId,
+          )}`,
+          {
+            cache: "no-store",
+            signal:
+              abortController.signal,
+          },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload =
+          (await response.json()) as FocusedIndividualResponse;
+
+        const individual =
+          payload.individual;
+        const address =
+          payload.relationships?.addresses?.find(
+            (candidate) =>
+              hasValidCoordinates(
+                candidate.latitude,
+                candidate.longitude,
+              ),
+          );
+
+        if (
+          !payload.success ||
+          !individual ||
+          !address ||
+          address.latitude === null ||
+          address.longitude === null
+        ) {
+          return;
+        }
+
+        setFocusedEntity({
+          id: `person:${individual.recordId}`,
+          type: "person",
+          title:
+            individual.legalName,
+          description:
+            individual.alias
+              ? `Vulgo: ${individual.alias}`
+              : "Pessoa vinculada ao local selecionado.",
+          coordinates: [
+            address.longitude,
+            address.latitude,
+          ],
+          createdAt:
+            "1970-01-01T00:00:00.000Z",
+          priority: "normal",
+          status:
+            "Localização vinculada",
+          reference:
+            individual.recordId,
+          locationLabel:
+            address.label,
+        });
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+      }
+    }
+
+    void loadFocusedIndividual();
+
+    return () => {
+      abortController.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!map || !focusedEntity) {
+      return;
+    }
+
+    setSelectedEntityId(
+      focusedEntity.id,
+    );
+
+    map.flyTo({
+      center:
+        focusedEntity.coordinates,
+      zoom: Math.max(
+        map.getZoom(),
+        15,
+      ),
+      duration: 900,
+      essential: true,
+    });
+  }, [focusedEntity, map]);
+
   const selectEntity =
     useCallback(
       (
@@ -427,7 +603,7 @@ function OperationalMapContent() {
       />
 
       <OperationalLayersPanel
-        entities={entities}
+        entities={allEntities}
         layers={layers}
         dataStatus={
           entitiesStatus
@@ -476,7 +652,11 @@ function OperationalMapContent() {
         hasSelectedEntity={Boolean(
           selectedEntity,
         )}
-        isEmpty={isEmpty}
+        isEmpty={
+          entitiesStatus ===
+            "success" &&
+          allEntities.length === 0
+        }
         onReload={
           reloadInterface
         }
