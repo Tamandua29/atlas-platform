@@ -374,14 +374,22 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
                         className="h-64 w-full"
                       />
                     </div>
-                    <a
-                      href={mapUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-300"
-                    >
-                      Abrir no OpenStreetMap
-                    </a>
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href={`/?focusRecordId=${encodeURIComponent(recordId)}`}
+                        className="inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-300"
+                      >
+                        Ver no mapa operacional
+                      </a>
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-xl border border-slate-700 px-4 py-2.5 font-semibold text-slate-200 hover:border-cyan-400/60 hover:text-cyan-200"
+                      >
+                        Abrir no OpenStreetMap
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   <p className="mt-5 text-sm text-amber-300">Sem coordenadas válidas</p>
