@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   OPERATIONAL_ENTITY_CONFIG,
   OPERATIONAL_PRIORITY_CONFIG,
@@ -40,6 +42,11 @@ export function EntityDetailsPanel({
   const formattedDate = formatEntityDate(
     entity.createdAt,
   );
+
+  const individualProfileHref =
+    entity.type === "person"
+      ? `/intelligence/individuals/${encodeURIComponent(entity.reference)}`
+      : null;
 
   return (
     <aside className="absolute bottom-4 right-4 top-4 z-20 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950/95 shadow-2xl backdrop-blur">
@@ -154,9 +161,20 @@ export function EntityDetailsPanel({
           Fechar
         </button>
 
+        {individualProfileHref && (
+          <Link
+            href={individualProfileHref}
+            className="rounded-xl border border-cyan-500/50 bg-cyan-500/10 px-3 py-3 text-center text-xs font-semibold text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-400/20 hover:text-white"
+          >
+            Abrir ficha
+          </Link>
+        )}
+
         <button
           type="button"
-          className="rounded-xl bg-cyan-400 px-3 py-3 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300"
+          className={`rounded-xl bg-cyan-400 px-3 py-3 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300 ${
+            individualProfileHref ? "col-span-2" : ""
+          }`}
           onClick={onCenter}
         >
           Centralizar
