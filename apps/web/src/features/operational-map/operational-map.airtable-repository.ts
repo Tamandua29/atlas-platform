@@ -23,7 +23,7 @@ type AirtableOccurrenceFields = {
   Endereços?: string[];
 };
 
-type AirtableAddressFields = {
+type AirtableAddressFields = Record<string, unknown> & {
   "ID Endereço"?: string;
   "Endereço Completo"?: string;
   Logradouro?: string;
@@ -39,6 +39,11 @@ type AirtableAddressFields = {
   Fonte?: string;
 };
 
+type AirtableIndividualFields = {
+  "Nome Completo"?: string;
+  "Vulgo Principal"?: string;
+};
+
 type AirtableRecord<Fields> = {
   id: string;
   createdTime: string;
@@ -50,11 +55,7 @@ function normalizeText(value: unknown): string {
     return value.trim();
   }
 
-  if (
-    value !== null &&
-    typeof value === "object" &&
-    "name" in value
-  ) {
+  if (value !== null && typeof value === "object" && "name" in value) {
     const namedValue = value as {
       name?: unknown;
     };
@@ -77,9 +78,7 @@ function determinePriority(
     occurrence.Descrição,
     occurrence["Resultado Operacional"],
   ]
-    .map((value) =>
-      normalizeText(value).toLowerCase(),
-    )
+    .map((value) => normalizeText(value).toLowerCase())
     .join(" ");
 
   const highPriorityTerms = [
@@ -98,10 +97,9 @@ function determinePriority(
     "ameaca",
   ];
 
-  const hasHighPriorityTerm =
-    highPriorityTerms.some((term) =>
-      searchableText.includes(term),
-    );
+  const hasHighPriorityTerm = highPriorityTerms.some((term) =>
+    searchableText.includes(term),
+  );
 
   if (hasHighPriorityTerm) {
     return "high";
@@ -119,10 +117,9 @@ function determinePriority(
     "averiguacao",
   ];
 
-  const hasMediumPriorityTerm =
-    mediumPriorityTerms.some((term) =>
-      searchableText.includes(term),
-    );
+  const hasMediumPriorityTerm = mediumPriorityTerms.some((term) =>
+    searchableText.includes(term),
+  );
 
   if (hasMediumPriorityTerm) {
     return "medium";
@@ -156,60 +153,99 @@ function getValidCoordinates(
   return [longitude, latitude];
 }
 
-function buildAddressLabel(
+function linkedIndividualRecordIds(
   address: AirtableAddressFields,
-): string {
-  const fullAddress = normalizeText(
-    address["Endereço Completo"],
+  individualRecordIds: Set<string>,
+): string[] {
+  const linkedIds = new Set<string>();
+
+  for (const value of Object.values(address)) {
+    if (!Array.isArray(value)) {
+      continue;
+    }
+
+    for (const candidate of value) {
+      if (typeof candidate === "string" && individualRecordIds.has(candidate)) {
+        linkedIds.add(candidate);
+      }
+    }
+  }
+
+  return [...linkedIds];
+}
+
+function mapIndividualToEntity(
+  individualRecord: AirtableRecord<AirtableIndividualFields>,
+  addressRecord: AirtableRecord<AirtableAddressFields>,
+): OperationalEntity | null {
+  const legalName = normalizeText(individualRecord.fields["Nome Completo"]);
+  const coordinates = getValidCoordinates(
+    addressRecord.fields.Latitude,
+    addressRecord.fields.Longitude,
   );
+
+  if (!legalName || !coordinates) {
+    return null;
+  }
+
+  const neighborhood = normalizeText(addressRecord.fields.Bairro);
+
+  if (
+    !isCoordinateConsistentWithNeighborhood({
+      neighborhood: neighborhood || null,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    })
+  ) {
+    return null;
+  }
+
+  const alias = normalizeText(individualRecord.fields["Vulgo Principal"]);
+  const verificationStatus = normalizeText(
+    addressRecord.fields["Situação da Verificação"],
+  );
+
+  return {
+    id: `person:${individualRecord.id}:${addressRecord.id}`,
+    type: "person",
+    title: legalName,
+    description: alias
+      ? `Vulgo: ${alias}`
+      : "Pessoa vinculada ao endereço georreferenciado.",
+    coordinates,
+    createdAt: individualRecord.createdTime,
+    priority: "normal",
+    status: verificationStatus || "Localização vinculada",
+    reference: individualRecord.id,
+    locationLabel:
+      buildAddressLabel(addressRecord.fields) || "Localização não informada",
+  };
+}
+
+function buildAddressLabel(address: AirtableAddressFields): string {
+  const fullAddress = normalizeText(address["Endereço Completo"]);
 
   if (fullAddress) {
     return fullAddress;
   }
 
-  const street = normalizeText(
-    address.Logradouro,
-  );
+  const street = normalizeText(address.Logradouro);
 
-  const number = normalizeText(
-    address.Número,
-  );
+  const number = normalizeText(address.Número);
 
-  const complement = normalizeText(
-    address.Complemento,
-  );
+  const complement = normalizeText(address.Complemento);
 
-  const neighborhood = normalizeText(
-    address.Bairro,
-  );
+  const neighborhood = normalizeText(address.Bairro);
 
-  const city = normalizeText(
-    address.Município,
-  );
+  const city = normalizeText(address.Município);
 
-  const state = normalizeText(
-    address.Estado,
-  );
+  const state = normalizeText(address.Estado);
 
-  const postalCode = normalizeText(
-    address.CEP,
-  );
+  const postalCode = normalizeText(address.CEP);
 
-  const streetAndNumber = [
-    street,
-    number,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const streetAndNumber = [street, number].filter(Boolean).join(", ");
 
-  return [
-    streetAndNumber,
-    complement,
-    neighborhood,
-    city,
-    state,
-    postalCode,
-  ]
+  return [streetAndNumber, complement, neighborhood, city, state, postalCode]
     .filter(Boolean)
     .join(" — ");
 }
@@ -217,17 +253,13 @@ function buildAddressLabel(
 function buildOccurrenceDescription(
   occurrence: AirtableOccurrenceFields,
 ): string {
-  const description = normalizeText(
-    occurrence.Descrição,
-  );
+  const description = normalizeText(occurrence.Descrição);
 
   if (description) {
     return description;
   }
 
-  const operationalResult = normalizeText(
-    occurrence["Resultado Operacional"],
-  );
+  const operationalResult = normalizeText(occurrence["Resultado Operacional"]);
 
   if (operationalResult) {
     return operationalResult;
@@ -236,20 +268,14 @@ function buildOccurrenceDescription(
   return "Ocorrência operacional registrada no SIO.";
 }
 
-function buildOccurrenceTitle(
-  occurrence: AirtableOccurrenceFields,
-): string {
-  const nature = normalizeText(
-    occurrence.Natureza,
-  );
+function buildOccurrenceTitle(occurrence: AirtableOccurrenceFields): string {
+  const nature = normalizeText(occurrence.Natureza);
 
   if (nature) {
     return nature;
   }
 
-  const category = normalizeText(
-    occurrence.Categoria,
-  );
+  const category = normalizeText(occurrence.Categoria);
 
   if (category) {
     return category;
@@ -262,17 +288,13 @@ function buildOccurrenceReference(
   occurrence: AirtableOccurrenceFields,
   recordId: string,
 ): string {
-  const occurrenceNumber = normalizeText(
-    occurrence["Número da Ocorrência"],
-  );
+  const occurrenceNumber = normalizeText(occurrence["Número da Ocorrência"]);
 
   if (occurrenceNumber) {
     return occurrenceNumber;
   }
 
-  const occurrenceId = normalizeText(
-    occurrence["ID Ocorrência"],
-  );
+  const occurrenceId = normalizeText(occurrence["ID Ocorrência"]);
 
   if (occurrenceId) {
     return occurrenceId;
@@ -285,23 +307,17 @@ function buildCreatedAt(
   occurrence: AirtableOccurrenceFields,
   fallbackCreatedTime: string,
 ): string {
-  const occurrenceDate = normalizeText(
-    occurrence["Data e Hora"],
-  );
+  const occurrenceDate = normalizeText(occurrence["Data e Hora"]);
 
   if (occurrenceDate) {
-    const parsedDate = new Date(
-      occurrenceDate,
-    );
+    const parsedDate = new Date(occurrenceDate);
 
     if (!Number.isNaN(parsedDate.getTime())) {
       return parsedDate.toISOString();
     }
   }
 
-  const fallbackDate = new Date(
-    fallbackCreatedTime,
-  );
+  const fallbackDate = new Date(fallbackCreatedTime);
 
   if (!Number.isNaN(fallbackDate.getTime())) {
     return fallbackDate.toISOString();
@@ -330,44 +346,24 @@ function mapOccurrenceToEntity(
     return null;
   }
 
-  const occurrence =
-    occurrenceRecord.fields;
+  const occurrence = occurrenceRecord.fields;
 
-  const address =
-    addressRecord.fields;
+  const address = addressRecord.fields;
 
-  const addressLabel =
-    buildAddressLabel(address);
+  const addressLabel = buildAddressLabel(address);
 
-  const status =
-    normalizeText(occurrence.Situação) ||
-    "Sem classificação";
+  const status = normalizeText(occurrence.Situação) || "Sem classificação";
 
   return {
     id: occurrenceRecord.id,
     type: "occurrence",
-    title: buildOccurrenceTitle(
-      occurrence,
-    ),
-    description:
-      buildOccurrenceDescription(
-        occurrence,
-      ),
-    reference:
-      buildOccurrenceReference(
-        occurrence,
-        occurrenceRecord.id,
-      ),
-    locationLabel:
-      addressLabel ||
-      "Localização não informada",
+    title: buildOccurrenceTitle(occurrence),
+    description: buildOccurrenceDescription(occurrence),
+    reference: buildOccurrenceReference(occurrence, occurrenceRecord.id),
+    locationLabel: addressLabel || "Localização não informada",
     coordinates,
-    createdAt: buildCreatedAt(
-      occurrence,
-      occurrenceRecord.createdTime,
-    ),
-    priority:
-      determinePriority(occurrence),
+    createdAt: buildCreatedAt(occurrence, occurrenceRecord.createdTime),
+    priority: determinePriority(occurrence),
     status,
   };
 }
@@ -375,99 +371,70 @@ function mapOccurrenceToEntity(
 export async function loadOperationalEntitiesFromAirtable(): Promise<
   OperationalEntity[]
 > {
-  const configuration =
-    getAirtableConfiguration();
+  const configuration = getAirtableConfiguration();
 
-  const [
-    occurrenceRecords,
-    addressRecords,
-  ] = await Promise.all([
-    listAllAirtableRecords<AirtableOccurrenceFields>(
-      configuration.occurrencesTableId,
-      {
-        fields: [
-          "ID Ocorrência",
-          "Número da Ocorrência",
-          "Data e Hora",
-          "Natureza",
-          "Categoria",
-          "Situação",
-          "Descrição",
-          "Resultado Operacional",
-          "Fonte",
-          "Confiabilidade",
-          "Endereços",
-        ],
+  const [occurrenceRecords, addressRecords, individualRecords] =
+    await Promise.all([
+      listAllAirtableRecords<AirtableOccurrenceFields>(
+        configuration.occurrencesTableId,
+        {
+          fields: [
+            "ID Ocorrência",
+            "Número da Ocorrência",
+            "Data e Hora",
+            "Natureza",
+            "Categoria",
+            "Situação",
+            "Descrição",
+            "Resultado Operacional",
+            "Fonte",
+            "Confiabilidade",
+            "Endereços",
+          ],
 
-        sort: [
-          {
-            field: "Data e Hora",
-            direction: "desc",
-          },
-        ],
-      },
-    ),
+          sort: [
+            {
+              field: "Data e Hora",
+              direction: "desc",
+            },
+          ],
+        },
+      ),
 
-    listAllAirtableRecords<AirtableAddressFields>(
-      configuration.addressesTableId,
-      {
-        fields: [
-          "ID Endereço",
-          "Endereço Completo",
-          "Logradouro",
-          "Número",
-          "Complemento",
-          "Bairro",
-          "Município",
-          "Estado",
-          "CEP",
-          "Latitude",
-          "Longitude",
-          "Situação da Verificação",
-          "Fonte",
-        ],
-      },
-    ),
-  ]);
+      listAllAirtableRecords<AirtableAddressFields>(
+        configuration.addressesTableId,
+        {
+          baseId: configuration.individualsPreviewBaseId,
+        },
+      ),
+
+      listAllAirtableRecords<AirtableIndividualFields>(
+        configuration.individualsTableId,
+        {
+          baseId: configuration.individualsPreviewBaseId,
+          fields: ["Nome Completo", "Vulgo Principal"],
+        },
+      ),
+    ]);
 
   const addressesByRecordId = new Map<
     string,
     AirtableRecord<AirtableAddressFields>
-  >(
-    addressRecords.map((record) => [
-      record.id,
-      record,
-    ]),
-  );
+  >(addressRecords.map((record) => [record.id, record]));
 
-  const entities: OperationalEntity[] =
-    [];
+  const entities: OperationalEntity[] = [];
 
-  for (
-    const occurrenceRecord of
-    occurrenceRecords
-  ) {
-    const linkedAddressIds =
-      occurrenceRecord.fields.Endereços ??
-      [];
+  for (const occurrenceRecord of occurrenceRecords) {
+    const linkedAddressIds = occurrenceRecord.fields.Endereços ?? [];
 
-    for (
-      const addressId of linkedAddressIds
-    ) {
-      const addressRecord =
-        addressesByRecordId.get(
-          addressId,
-        );
+    for (const addressId of linkedAddressIds) {
+      const addressRecord = addressesByRecordId.get(addressId);
 
       if (!addressRecord) {
         continue;
       }
 
-      const entity =
-        mapOccurrenceToEntity(
-          occurrenceRecord,
-          addressRecord,
-        );
+      const entity = mapOccurrenceToEntity(occurrenceRecord, addressRecord);
 
       if (!entity) {
         continue;
@@ -482,16 +449,33 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
     }
   }
 
+  const individualsByRecordId = new Map(
+    individualRecords.map((record) => [record.id, record]),
+  );
+  const individualRecordIds = new Set(individualsByRecordId.keys());
+
+  for (const addressRecord of addressRecords) {
+    for (const individualRecordId of linkedIndividualRecordIds(
+      addressRecord.fields,
+      individualRecordIds,
+    )) {
+      const individualRecord = individualsByRecordId.get(individualRecordId);
+
+      if (!individualRecord) {
+        continue;
+      }
+
+      const entity = mapIndividualToEntity(individualRecord, addressRecord);
+
+      if (entity) {
+        entities.push(entity);
+      }
+    }
+  }
+
   return entities.sort(
-    (
-      firstEntity,
-      secondEntity,
-    ) =>
-      new Date(
-        secondEntity.createdAt,
-      ).getTime() -
-      new Date(
-        firstEntity.createdAt,
-      ).getTime(),
+    (firstEntity, secondEntity) =>
+      new Date(secondEntity.createdAt).getTime() -
+      new Date(firstEntity.createdAt).getTime(),
   );
 }
