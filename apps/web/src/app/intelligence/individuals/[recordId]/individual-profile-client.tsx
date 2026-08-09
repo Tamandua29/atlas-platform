@@ -342,12 +342,14 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
           {addresses.length === 0 ? (
             <p className="text-slate-500">Nenhum endereço vinculado foi localizado.</p>
           ) : addresses.map((address) => {
-            const hasCoordinates = address.latitude !== null && address.longitude !== null;
+            const latitude = address.latitude;
+            const longitude = address.longitude;
+            const hasCoordinates = latitude !== null && longitude !== null;
             const mapUrl = hasCoordinates
-              ? openStreetMapUrl(address.latitude, address.longitude)
+              ? openStreetMapUrl(latitude, longitude)
               : null;
             const mapEmbedUrl = hasCoordinates
-              ? openStreetMapEmbedUrl(address.latitude, address.longitude)
+              ? openStreetMapEmbedUrl(latitude, longitude)
               : null;
 
             return (
