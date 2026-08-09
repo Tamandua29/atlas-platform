@@ -17,7 +17,6 @@ type AirtableOccurrenceFields = {
   Situação?: string;
   Descrição?: string;
   "Resultado Operacional"?: string;
-  "Unidade Responsável"?: string;
   Fonte?: string;
   Confiabilidade?: string;
   Endereços?: string[];
@@ -387,7 +386,6 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
           "Situação",
           "Descrição",
           "Resultado Operacional",
-          "Unidade Responsável",
           "Fonte",
           "Confiabilidade",
           "Endereços",
