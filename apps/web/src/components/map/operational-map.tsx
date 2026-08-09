@@ -402,7 +402,7 @@ function OperationalMapContent() {
           return;
         }
 
-        setFocusedEntity({
+        const entity: OperationalEntity = {
           id: `person:${individual.recordId}`,
           type: "person",
           title:
@@ -424,7 +424,12 @@ function OperationalMapContent() {
             individual.recordId,
           locationLabel:
             address.label,
-        });
+        };
+
+        setFocusedEntity(entity);
+        setSelectedEntityId(
+          entity.id,
+        );
       } catch (error) {
         if (
           error instanceof DOMException &&
@@ -446,10 +451,6 @@ function OperationalMapContent() {
     if (!map || !focusedEntity) {
       return;
     }
-
-    setSelectedEntityId(
-      focusedEntity.id,
-    );
 
     map.flyTo({
       center:
