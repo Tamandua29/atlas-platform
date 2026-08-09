@@ -11,6 +11,7 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { MANAUS_CENTER } from "@/features/operational-map/operational-map.data";
+import { isCoordinateConsistentWithNeighborhood } from "@/features/operational-map/geographic-consistency";
 
 import type {
   OperationalEntity,
@@ -41,6 +42,7 @@ type FocusedIndividualResponse = {
     addresses?: Array<{
       recordId: string;
       label: string;
+      neighborhood: string | null;
       latitude: number | null;
       longitude: number | null;
     }>;
@@ -358,6 +360,8 @@ function OperationalMapContent() {
       return;
     }
 
+    const focusedRecordId = focusRecordId;
+
     const abortController =
       new AbortController();
 
@@ -365,7 +369,7 @@ function OperationalMapContent() {
       try {
         const response = await fetch(
           `/api/intelligence/individuals/${encodeURIComponent(
-            focusRecordId,
+            focusedRecordId,
           )}`,
           {
             cache: "no-store",
@@ -389,7 +393,14 @@ function OperationalMapContent() {
               hasValidCoordinates(
                 candidate.latitude,
                 candidate.longitude,
-              ),
+              ) &&
+              candidate.latitude !== null &&
+              candidate.longitude !== null &&
+              isCoordinateConsistentWithNeighborhood({
+                neighborhood: candidate.neighborhood,
+                latitude: candidate.latitude,
+                longitude: candidate.longitude,
+              }),
           );
 
         if (
