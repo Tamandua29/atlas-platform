@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -132,6 +133,12 @@ export function OrganizationDirectoryClient() {
             <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
               <strong className="text-cyan-300">{organization.linkedIndividualCount}</strong> indivíduo(s) em {organization.explicitLinkCount} vínculo(s) explícito(s)
             </div>
+            <Link
+              href={`/intelligence/organizations/${organization.recordId}`}
+              className="mt-5 inline-flex rounded-xl bg-cyan-500 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-400"
+            >
+              Abrir ficha
+            </Link>
           </article>
         ))}
       </section>
