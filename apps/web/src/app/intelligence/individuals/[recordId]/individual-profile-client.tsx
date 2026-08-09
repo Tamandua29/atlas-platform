@@ -251,7 +251,36 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         <Info label="RG" value={individual.identityDocumentPresent ? "Documento presente" : "Não informado"} />
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+            <nav
+        aria-label="Navegação da ficha individual"
+        className="sticky top-0 z-20 -mx-2 overflow-x-auto rounded-2xl border border-slate-800 bg-[#070b17]/95 p-2 shadow-xl shadow-slate-950/30 backdrop-blur"
+      >
+        <div className="flex min-w-max gap-2">
+          {[
+            ["fotografias", "Fotos", photos.length],
+            ["enderecos", "Endereços", addresses.length],
+            ["telefones", "Telefones", phones.length],
+            ["veiculos", "Veículos", vehicles.length],
+            ["mandados", "Mandados", warrants.length],
+            ["ocorrencias", "Ocorrências", occurrences.length],
+            ["organizacoes", "Organizações", organizations.length],
+            ["vinculos", "Vínculos", personalRelationships.length],
+            ["documentos", "Relatórios", documents.length],
+            ["linha-do-tempo", "Linha do tempo", timeline.length],
+          ].map(([target, label, count]) => (
+            <a
+              key={target}
+              href={`#${target}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-cyan-400/60 hover:bg-cyan-400/10 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            >
+              <span>{label}</span>
+              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">{count}</span>
+            </a>
+          ))}
+        </div>
+      </nav>
+
+<section id="fotografias" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -297,7 +326,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="enderecos" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -363,7 +392,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="telefones" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -398,7 +427,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="veiculos" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -443,7 +472,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="mandados" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -494,7 +523,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="ocorrencias" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -539,7 +568,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="organizacoes" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -584,7 +613,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="vinculos" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -635,7 +664,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="documentos" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -680,7 +709,7 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60">
+      <section id="linha-do-tempo" className="scroll-mt-28 rounded-2xl border border-slate-800 bg-slate-900/60">
         <div className="border-b border-slate-800 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
