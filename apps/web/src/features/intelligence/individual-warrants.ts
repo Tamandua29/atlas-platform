@@ -31,6 +31,8 @@ export type IndividualWarrant = {
   consultedAt: string | null;
 };
 
+export type OperationalWarrant = Omit<IndividualWarrant, "sources">;
+
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -64,37 +66,62 @@ function labels(value: unknown): string[] {
     })
     .filter(Boolean);
 }
+function toIndividualWarrant(record: {
+  id: string;
+  fields: WarrantFields;
+}): IndividualWarrant {
+  return {
+    recordId: record.id,
+    maskedWarrantNumber: maskReference(record.fields["Número do Mandado"], "Mandado sem referência"),
+    maskedCaseNumber: maskReference(record.fields["Número do Processo"], "Processo não informado"),
+    issuingAuthority: text(record.fields["Autoridade Emissora"]) || null,
+    court: text(record.fields.Tribunal) || null,
+    type: text(record.fields["Tipo de Mandado"]) || null,
+    issuedAt: text(record.fields["Data de Emissão"]) || null,
+    expiresAt: text(record.fields["Data de Validade"]) || null,
+    status: text(record.fields["Status do Mandado"]) || null,
+    sources: labels(record.fields["Fonte da Consulta"]),
+    consultedAt: text(record.fields["Data da Consulta"]) || null,
+  };
+}
+
+async function loadWarrants(): Promise<Array<{ id: string; fields: WarrantFields }>> {
+  const configuration = getAirtableConfiguration();
+  return listAllAirtableRecords<WarrantFields>(configuration.warrantsTableId, {
+    baseId: configuration.individualsPreviewBaseId,
+  });
+}
+
+export async function listOperationalWarrants(
+  limit = 100,
+): Promise<OperationalWarrant[]> {
+  const safeLimit = Math.max(1, Math.min(Math.trunc(limit) || 100, 200));
+  const records = await loadWarrants();
+  return records.slice(0, safeLimit).map((record) => {
+    const warrant = toIndividualWarrant(record);
+    return {
+      recordId: warrant.recordId,
+      maskedWarrantNumber: warrant.maskedWarrantNumber,
+      maskedCaseNumber: warrant.maskedCaseNumber,
+      issuingAuthority: warrant.issuingAuthority,
+      court: warrant.court,
+      type: warrant.type,
+      issuedAt: warrant.issuedAt,
+      expiresAt: warrant.expiresAt,
+      status: warrant.status,
+      consultedAt: warrant.consultedAt,
+    };
+  });
+}
 
 export async function listWarrantsForIndividual(
   individualRecordId: string,
 ): Promise<IndividualWarrant[]> {
   if (!/^rec[a-zA-Z0-9]+$/.test(individualRecordId)) return [];
 
-  const configuration = getAirtableConfiguration();
-  const records = await listAllAirtableRecords<WarrantFields>(
-    configuration.warrantsTableId,
-    { baseId: configuration.individualsPreviewBaseId },
-  );
+  const records = await loadWarrants();
 
   return records
     .filter((record) => linkedToIndividual(record.fields, individualRecordId))
-    .map((record) => ({
-      recordId: record.id,
-      maskedWarrantNumber: maskReference(
-        record.fields["Número do Mandado"],
-        "Mandado sem referência",
-      ),
-      maskedCaseNumber: maskReference(
-        record.fields["Número do Processo"],
-        "Processo não informado",
-      ),
-      issuingAuthority: text(record.fields["Autoridade Emissora"]) || null,
-      court: text(record.fields.Tribunal) || null,
-      type: text(record.fields["Tipo de Mandado"]) || null,
-      issuedAt: text(record.fields["Data de Emissão"]) || null,
-      expiresAt: text(record.fields["Data de Validade"]) || null,
-      status: text(record.fields["Status do Mandado"]) || null,
-      sources: labels(record.fields["Fonte da Consulta"]),
-      consultedAt: text(record.fields["Data da Consulta"]) || null,
-    }));
+    .map(toIndividualWarrant);
 }
