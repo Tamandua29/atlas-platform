@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -26,10 +20,7 @@ import { EntityDetailsPanel } from "./panels/entity-details-panel";
 import { OperationalLayersPanel } from "./panels/operational-layers-panel";
 import { OperationalEntitiesProvider } from "./providers/operational-entities-provider";
 
-type MapStatus =
-  | "loading"
-  | "ready"
-  | "error";
+type MapStatus = "loading" | "ready" | "error";
 
 type FocusedIndividualResponse = {
   success: boolean;
@@ -72,113 +63,73 @@ const INITIAL_LAYER_VISIBILITY: OperationalLayerVisibility = {
   alert: true,
 };
 
-function OperationalMapContent() {
-  const containerRef =
-    useRef<HTMLDivElement | null>(null);
+type OperationalMapProps = {
+  expanded?: boolean;
+};
 
-  const [map, setMap] =
-    useState<import("maplibre-gl").Map | null>(
-      null,
-    );
+function OperationalMapContent({ expanded = false }: OperationalMapProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [
-    mapStatus,
-    setMapStatus,
-  ] = useState<MapStatus>("loading");
+  const [map, setMap] = useState<import("maplibre-gl").Map | null>(null);
 
-  const [
-    mapErrorMessage,
-    setMapErrorMessage,
-  ] = useState("");
+  const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
 
-  const [layers, setLayers] =
-    useState<OperationalLayerVisibility>(
-      INITIAL_LAYER_VISIBILITY,
-    );
+  const [mapErrorMessage, setMapErrorMessage] = useState("");
 
-  const [
-    selectedEntityId,
-    setSelectedEntityId,
-  ] = useState<string | null>(null);
+  const [layers, setLayers] = useState<OperationalLayerVisibility>(
+    INITIAL_LAYER_VISIBILITY,
+  );
 
-  const [
-    focusedEntity,
-    setFocusedEntity,
-  ] = useState<OperationalEntity | null>(
-    null,
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+
+  const [focusedEntities, setFocusedEntities] = useState<OperationalEntity[]>(
+    [],
   );
 
   const {
     entities,
     status: entitiesStatus,
-    errorMessage:
-      entitiesErrorMessage,
+    errorMessage: entitiesErrorMessage,
     generatedAt,
     isLoading: entitiesAreLoading,
     reload: reloadEntities,
   } = useOperationalEntities();
 
   const allEntities = useMemo(() => {
-    if (
-      !focusedEntity ||
-      entities.some(
-        (entity) =>
-          entity.id === focusedEntity.id,
-      )
-    ) {
+    if (focusedEntities.length === 0) {
       return entities;
     }
 
     return [
-      focusedEntity,
+      ...focusedEntities.filter(
+        (focusedEntity) =>
+          !entities.some((entity) => entity.id === focusedEntity.id),
+      ),
       ...entities,
     ];
-  }, [entities, focusedEntity]);
+  }, [entities, focusedEntities]);
 
   const selectedEntity = useMemo(
-    () =>
-      allEntities.find(
-        (entity) =>
-          entity.id ===
-          selectedEntityId,
-      ) ?? null,
-    [
-      allEntities,
-      selectedEntityId,
-    ],
+    () => allEntities.find((entity) => entity.id === selectedEntityId) ?? null,
+    [allEntities, selectedEntityId],
   );
 
   const visibleEntities = useMemo(
-    () =>
-      allEntities.filter(
-        (entity) =>
-          layers[entity.type],
-      ),
+    () => allEntities.filter((entity) => layers[entity.type]),
     [allEntities, layers],
   );
 
-  const interfaceStatus: MapStatus =
-    useMemo(() => {
-      if (
-        mapStatus === "error" ||
-        entitiesStatus === "error"
-      ) {
-        return "error";
-      }
+  const interfaceStatus: MapStatus = useMemo(() => {
+    if (mapStatus === "error" || entitiesStatus === "error") {
+      return "error";
+    }
 
-      if (
-        mapStatus === "loading" ||
-        entitiesAreLoading
-      ) {
-        return "loading";
-      }
+    if (mapStatus === "loading" || entitiesAreLoading) {
+      return "loading";
+    }
 
-      return "ready";
-    }, [
-      entitiesAreLoading,
-      entitiesStatus,
-      mapStatus,
-    ]);
+    return "ready";
+  }, [entitiesAreLoading, entitiesStatus, mapStatus]);
 
   const interfaceErrorMessage =
     mapErrorMessage ||
@@ -189,10 +140,7 @@ function OperationalMapContent() {
     let cancelled = false;
 
     async function initializeMap() {
-      if (
-        !containerRef.current ||
-        map
-      ) {
+      if (!containerRef.current || map) {
         return;
       }
 
@@ -200,60 +148,44 @@ function OperationalMapContent() {
         setMapStatus("loading");
         setMapErrorMessage("");
 
-        const {
-          Map,
-          NavigationControl,
-          FullscreenControl,
-          ScaleControl,
-        } = await import(
-          "maplibre-gl"
-        );
+        const { Map, NavigationControl, FullscreenControl, ScaleControl } =
+          await import("maplibre-gl");
 
-        if (
-          cancelled ||
-          !containerRef.current
-        ) {
+        if (cancelled || !containerRef.current) {
           return;
         }
 
-        const mapInstance =
-          new Map({
-            container:
-              containerRef.current,
+        const mapInstance = new Map({
+          container: containerRef.current,
 
-            style: {
-              version: 8,
+          style: {
+            version: 8,
 
-              sources: {
-                openStreetMap: {
-                  type: "raster",
+            sources: {
+              openStreetMap: {
+                type: "raster",
 
-                  tiles: [
-                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  ],
+                tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
 
-                  tileSize: 256,
+                tileSize: 256,
 
-                  attribution:
-                    "© OpenStreetMap contributors",
-                },
+                attribution: "© OpenStreetMap contributors",
               },
-
-              layers: [
-                {
-                  id: "openStreetMap",
-                  type: "raster",
-                  source:
-                    "openStreetMap",
-                },
-              ],
             },
 
-            center:
-              MANAUS_CENTER,
-            zoom: 10,
-            attributionControl: {},
-          });
+            layers: [
+              {
+                id: "openStreetMap",
+                type: "raster",
+                source: "openStreetMap",
+              },
+            ],
+          },
+
+          center: MANAUS_CENTER,
+          zoom: 10,
+          attributionControl: {},
+        });
 
         mapInstance.addControl(
           new NavigationControl({
@@ -263,10 +195,7 @@ function OperationalMapContent() {
           "top-right",
         );
 
-        mapInstance.addControl(
-          new FullscreenControl(),
-          "top-right",
-        );
+        mapInstance.addControl(new FullscreenControl(), "top-right");
 
         mapInstance.addControl(
           new ScaleControl({
@@ -276,47 +205,29 @@ function OperationalMapContent() {
           "bottom-left",
         );
 
-        mapInstance.on(
-          "load",
-          () => {
-            mapInstance.resize();
+        mapInstance.on("load", () => {
+          mapInstance.resize();
 
-            if (!cancelled) {
-              setMap(mapInstance);
+          if (!cancelled) {
+            setMap(mapInstance);
 
-              setMapStatus(
-                "ready",
-              );
-            }
-          },
-        );
+            setMapStatus("ready");
+          }
+        });
 
-        mapInstance.on(
-          "error",
-          (event) => {
-            console.error(
-              "Erro do MapLibre:",
-              event.error,
+        mapInstance.on("error", (event) => {
+          console.error("Erro do MapLibre:", event.error);
+
+          if (!cancelled) {
+            setMapErrorMessage(
+              event.error?.message ?? "Falha ao carregar a base cartográfica.",
             );
 
-            if (!cancelled) {
-              setMapErrorMessage(
-                event.error
-                  ?.message ??
-                  "Falha ao carregar a base cartográfica.",
-              );
-
-              setMapStatus(
-                "error",
-              );
-            }
-          },
-        );
+            setMapStatus("error");
+          }
+        });
       } catch (error) {
-        console.error(
-          "Falha ao inicializar o mapa:",
-          error,
-        );
+        console.error("Falha ao inicializar o mapa:", error);
 
         if (!cancelled) {
           setMapErrorMessage(
@@ -325,9 +236,7 @@ function OperationalMapContent() {
               : "Não foi possível inicializar o mapa.",
           );
 
-          setMapStatus(
-            "error",
-          );
+          setMapStatus("error");
         }
       }
     }
@@ -346,24 +255,17 @@ function OperationalMapContent() {
   }, [map]);
 
   useEffect(() => {
-    const focusRecordId =
-      new URLSearchParams(
-        window.location.search,
-      ).get("focusRecordId");
+    const focusRecordId = new URLSearchParams(window.location.search).get(
+      "focusRecordId",
+    );
 
-    if (
-      !focusRecordId ||
-      !/^[A-Za-z0-9_-]{3,80}$/.test(
-        focusRecordId,
-      )
-    ) {
+    if (!focusRecordId || !/^[A-Za-z0-9_-]{3,80}$/.test(focusRecordId)) {
       return;
     }
 
     const focusedRecordId = focusRecordId;
 
-    const abortController =
-      new AbortController();
+    const abortController = new AbortController();
 
     async function loadFocusedIndividual() {
       try {
@@ -373,8 +275,7 @@ function OperationalMapContent() {
           )}`,
           {
             cache: "no-store",
-            signal:
-              abortController.signal,
+            signal: abortController.signal,
           },
         );
 
@@ -382,70 +283,55 @@ function OperationalMapContent() {
           return;
         }
 
-        const payload =
-          (await response.json()) as FocusedIndividualResponse;
+        const payload = (await response.json()) as FocusedIndividualResponse;
 
-        const individual =
-          payload.individual;
-        const address =
-          payload.relationships?.addresses?.find(
-            (candidate) =>
-              hasValidCoordinates(
-                candidate.latitude,
-                candidate.longitude,
-              ) &&
-              candidate.latitude !== null &&
-              candidate.longitude !== null &&
-              isCoordinateConsistentWithNeighborhood({
-                neighborhood: candidate.neighborhood,
-                latitude: candidate.latitude,
-                longitude: candidate.longitude,
-              }),
-          );
+        const individual = payload.individual;
+        const addresses = payload.relationships?.addresses?.filter(
+          (candidate) =>
+            hasValidCoordinates(candidate.latitude, candidate.longitude) &&
+            candidate.latitude !== null &&
+            candidate.longitude !== null &&
+            isCoordinateConsistentWithNeighborhood({
+              neighborhood: candidate.neighborhood,
+              latitude: candidate.latitude,
+              longitude: candidate.longitude,
+            }),
+        );
 
         if (
           !payload.success ||
           !individual ||
-          !address ||
-          address.latitude === null ||
-          address.longitude === null
+          !addresses ||
+          addresses.length === 0
         ) {
           return;
         }
 
-        const entity: OperationalEntity = {
-          id: `person:${individual.recordId}`,
-          type: "person",
-          title:
-            individual.legalName,
-          description:
-            individual.alias
-              ? `Vulgo: ${individual.alias}`
-              : "Pessoa vinculada ao local selecionado.",
-          coordinates: [
-            address.longitude,
-            address.latitude,
+        const focusEntities = addresses.map((address, index) => ({
+          id: `person:${individual.recordId}:${address.recordId}`,
+          type: "person" as const,
+          title: individual.legalName,
+          description: individual.alias
+            ? `Vulgo: ${individual.alias}`
+            : "Pessoa vinculada ao local selecionado.",
+          coordinates: [address.longitude!, address.latitude!] as [
+            number,
+            number,
           ],
-          createdAt:
-            "1970-01-01T00:00:00.000Z",
-          priority: "normal",
+          createdAt: "1970-01-01T00:00:00.000Z",
+          priority: "normal" as const,
           status:
-            "Localização vinculada",
-          reference:
-            individual.recordId,
-          locationLabel:
-            address.label,
-        };
+            index === 0
+              ? "Endereço principal válido"
+              : `Endereço vinculado ${index + 1}`,
+          reference: individual.recordId,
+          locationLabel: address.label,
+        }));
 
-        setFocusedEntity(entity);
-        setSelectedEntityId(
-          entity.id,
-        );
+        setFocusedEntities(focusEntities);
+        setSelectedEntityId(focusEntities[0].id);
       } catch (error) {
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
+        if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
       }
@@ -459,78 +345,64 @@ function OperationalMapContent() {
   }, []);
 
   useEffect(() => {
-    if (!map || !focusedEntity) {
+    if (!map || focusedEntities.length === 0) {
       return;
     }
 
-    map.flyTo({
-      center:
-        focusedEntity.coordinates,
-      zoom: Math.max(
-        map.getZoom(),
-        15,
-      ),
-      duration: 900,
-      essential: true,
-    });
-  }, [focusedEntity, map]);
+    if (focusedEntities.length === 1) {
+      map.flyTo({
+        center: focusedEntities[0].coordinates,
+        zoom: Math.max(map.getZoom(), 15),
+        duration: 900,
+        essential: true,
+      });
+      return;
+    }
 
-  const selectEntity =
-    useCallback(
-      (
-        entity: OperationalEntity,
-      ) => {
-        setSelectedEntityId(
-          entity.id,
-        );
-
-        if (!map) {
-          return;
-        }
-
-        map.flyTo({
-          center:
-            entity.coordinates,
-
-          zoom: Math.max(
-            map.getZoom(),
-            13,
-          ),
-
-          duration: 900,
-          essential: true,
-        });
-      },
-      [map],
+    const longitudes = focusedEntities.map((entity) => entity.coordinates[0]);
+    const latitudes = focusedEntities.map((entity) => entity.coordinates[1]);
+    map.fitBounds(
+      [
+        [Math.min(...longitudes), Math.min(...latitudes)],
+        [Math.max(...longitudes), Math.max(...latitudes)],
+      ],
+      { padding: 100, maxZoom: 15, duration: 900 },
     );
+  }, [focusedEntities, map]);
+
+  const selectEntity = useCallback(
+    (entity: OperationalEntity) => {
+      setSelectedEntityId(entity.id);
+
+      if (!map) {
+        return;
+      }
+
+      map.flyTo({
+        center: entity.coordinates,
+
+        zoom: Math.max(map.getZoom(), 13),
+
+        duration: 900,
+        essential: true,
+      });
+    },
+    [map],
+  );
 
   useOperationalMarkers({
     map,
-    entities:
-      visibleEntities,
+    entities: visibleEntities,
     selectedEntityId,
-    enabled:
-      mapStatus === "ready" &&
-      entitiesStatus ===
-        "success",
-    onSelectEntity:
-      selectEntity,
+    enabled: mapStatus === "ready" && entitiesStatus === "success",
+    onSelectEntity: selectEntity,
   });
 
-  function toggleLayer(
-    type: OperationalEntityType,
-  ) {
-    const layerWillBeHidden =
-      layers[type];
+  function toggleLayer(type: OperationalEntityType) {
+    const layerWillBeHidden = layers[type];
 
-    if (
-      layerWillBeHidden &&
-      selectedEntity?.type ===
-        type
-    ) {
-      setSelectedEntityId(
-        null,
-      );
+    if (layerWillBeHidden && selectedEntity?.type === type) {
+      setSelectedEntityId(null);
     }
 
     setLayers((current) => ({
@@ -564,16 +436,12 @@ function OperationalMapContent() {
   }
 
   function centerSelectedEntity() {
-    if (
-      !map ||
-      !selectedEntity
-    ) {
+    if (!map || !selectedEntity) {
       return;
     }
 
     map.flyTo({
-      center:
-        selectedEntity.coordinates,
+      center: selectedEntity.coordinates,
       zoom: 15,
       duration: 900,
       essential: true,
@@ -596,9 +464,7 @@ function OperationalMapContent() {
   }
 
   async function reloadInterface() {
-    if (
-      mapStatus === "error"
-    ) {
+    if (mapStatus === "error") {
       window.location.reload();
       return;
     }
@@ -607,7 +473,11 @@ function OperationalMapContent() {
   }
 
   return (
-    <div className="relative h-[520px] w-full overflow-hidden bg-[#020617]">
+    <div
+      className={`relative w-full overflow-hidden bg-[#020617] ${
+        expanded ? "h-[calc(100vh-9rem)] min-h-[680px]" : "h-[520px]"
+      }`}
+    >
       <div
         ref={containerRef}
         className="absolute inset-0 h-full w-full"
@@ -617,70 +487,38 @@ function OperationalMapContent() {
       <OperationalLayersPanel
         entities={allEntities}
         layers={layers}
-        dataStatus={
-          entitiesStatus
-        }
-        generatedAt={
-          generatedAt
-        }
-        onToggleLayer={
-          toggleLayer
-        }
-        onShowAll={
-          showAllLayers
-        }
-        onHideAll={
-          hideAllLayers
-        }
-        onReturnToOverview={
-          returnToManaus
-        }
-        onReloadData={
-          reloadEntities
-        }
+        dataStatus={entitiesStatus}
+        generatedAt={generatedAt}
+        onToggleLayer={toggleLayer}
+        onShowAll={showAllLayers}
+        onHideAll={hideAllLayers}
+        onReturnToOverview={returnToManaus}
+        onReloadData={reloadEntities}
       />
 
       {selectedEntity && (
         <EntityDetailsPanel
-          entity={
-            selectedEntity
-          }
-          onClose={
-            closeDetails
-          }
-          onCenter={
-            centerSelectedEntity
-          }
+          entity={selectedEntity}
+          onClose={closeDetails}
+          onCenter={centerSelectedEntity}
         />
       )}
 
       <MapStatusOverlays
-        status={
-          interfaceStatus
-        }
-        errorMessage={
-          interfaceErrorMessage
-        }
-        hasSelectedEntity={Boolean(
-          selectedEntity,
-        )}
-        isEmpty={
-          entitiesStatus ===
-            "success" &&
-          allEntities.length === 0
-        }
-        onReload={
-          reloadInterface
-        }
+        status={interfaceStatus}
+        errorMessage={interfaceErrorMessage}
+        hasSelectedEntity={Boolean(selectedEntity)}
+        isEmpty={entitiesStatus === "success" && allEntities.length === 0}
+        onReload={reloadInterface}
       />
     </div>
   );
 }
 
-export function OperationalMap() {
+export function OperationalMap(props: OperationalMapProps) {
   return (
     <OperationalEntitiesProvider>
-      <OperationalMapContent />
+      <OperationalMapContent {...props} />
     </OperationalEntitiesProvider>
   );
 }
