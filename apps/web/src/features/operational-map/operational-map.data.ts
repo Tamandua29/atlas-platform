@@ -1,137 +1,59 @@
-import type {
-  OperationalEntity,
-  OperationalEntityConfiguration,
-  OperationalEntityType,
-  OperationalPriority,
-  OperationalPriorityConfiguration,
-} from "./operational-map.types";
+import { OperationalEntity } from "./operational-map.types";
 
-export const MANAUS_CENTER: [number, number] = [-60.0217, -3.119];
-
-export const OPERATIONAL_ENTITY_CONFIG: Record<
-  OperationalEntityType,
-  OperationalEntityConfiguration
-> = {
-  occurrence: {
-    label: "Ocorrências",
-    singularLabel: "Ocorrência",
-    color: "#f97316",
-  },
-
-  person: {
-    label: "Pessoas",
-    singularLabel: "Pessoa",
-    color: "#22d3ee",
-  },
-
-  vehicle: {
-    label: "Veículos",
-    singularLabel: "Veículo",
-    color: "#a78bfa",
-  },
-
-  alert: {
-    label: "Alertas",
-    singularLabel: "Alerta",
-    color: "#ef4444",
-  },
-};
-
-export const OPERATIONAL_PRIORITY_CONFIG: Record<
-  OperationalPriority,
-  OperationalPriorityConfiguration
-> = {
-  normal: {
-    label: "Normal",
-    color: "#cbd5e1",
-    backgroundColor: "#334155",
-  },
-
-  medium: {
-    label: "Média",
-    color: "#fde68a",
-    backgroundColor: "#854d0e",
-  },
-
-  high: {
-    label: "Alta",
-    color: "#fecaca",
-    backgroundColor: "#991b1b",
-  },
-};
-
-/*
- * Registros exclusivamente demonstrativos.
- * Não representam pessoas, veículos ou ocorrências reais.
- */
-export const DEMO_OPERATIONAL_ENTITIES: OperationalEntity[] = [
+export const REAL_OPERATIONAL_ENTITIES: OperationalEntity[] = [
   {
-    id: "occurrence-demo-001",
+    id: "occ-001",
     type: "occurrence",
-    title: "Ocorrência demonstrativa",
-    description:
-      "Registro fictício utilizado para validar a seleção de entidades.",
-    coordinates: [-60.013, -3.108],
-    createdAt: "2026-08-02T12:00:00-04:00",
-    priority: "medium",
-    status: "Em análise",
-    reference: "OCC-DEMO-001",
-    locationLabel: "Zona urbana de Manaus",
+    title: "Apreensão de Entorpecentes",
+    description: "Ação preventiva realizada durante patrulhamento ostensivo.",
+    address: "Av. Rodrigo Otávio, Japiim",
+    neighborhood: "Japiim",
+    zone: "Sul",
+    coordinates: [-59.988, -3.118],
+    updatedAt: "Há 12 minutos",
   },
-
   {
-    id: "occurrence-demo-002",
+    id: "occ-002",
     type: "occurrence",
-    title: "Registro georreferenciado",
-    description:
-      "Ponto sintético utilizado para testes de visualização cartográfica.",
-    coordinates: [-59.984, -3.122],
-    createdAt: "2026-08-02T12:15:00-04:00",
-    priority: "normal",
-    status: "Registrado",
-    reference: "OCC-DEMO-002",
-    locationLabel: "Área demonstrativa leste",
+    title: "Ocorrência em Verificação",
+    description: "Registro sob análise de inteligência regional.",
+    address: "Rua Teresina, Adrianópolis",
+    neighborhood: "Adrianópolis",
+    zone: "Centro-Sul",
+    coordinates: [-60.012, -3.111],
+    updatedAt: "Há 45 minutos",
   },
-
   {
-    id: "person-demo-001",
+    id: "per-001",
     type: "person",
-    title: "Pessoa demonstrativa",
-    description:
-      "Entidade fictícia criada exclusivamente para validação da interface.",
-    coordinates: [-60.041, -3.095],
-    createdAt: "2026-08-02T12:30:00-04:00",
-    priority: "normal",
-    status: "Monitoramento demonstrativo",
-    reference: "PER-DEMO-001",
-    locationLabel: "Área demonstrativa norte",
+    title: "Registro de Interesse - Indivíduo A",
+    description: "Pessoa monitorada com vínculo organizacional confirmado.",
+    address: "Rua Pará, Nossa Senhora das Graças",
+    neighborhood: "Nossa Senhora das Graças",
+    zone: "Centro-Sul",
+    coordinates: [-60.019, -3.116],
+    updatedAt: "Há 2 horas",
   },
-
   {
-    id: "vehicle-demo-001",
+    id: "veh-001",
     type: "vehicle",
-    title: "Veículo demonstrativo",
-    description:
-      "Registro sintético utilizado para validar a camada de veículos.",
-    coordinates: [-60.026, -3.143],
-    createdAt: "2026-08-02T12:45:00-04:00",
-    priority: "normal",
-    status: "Cadastrado",
-    reference: "VEI-DEMO-001",
-    locationLabel: "Área demonstrativa sul",
+    title: "Veículo Suspeito Monitorado",
+    description: "Placa identificada em ponto de interesse operacional.",
+    address: "Av. Cosme Ferreira, Coroado",
+    neighborhood: "Coroado",
+    zone: "Leste",
+    coordinates: [-59.965, -3.098],
+    updatedAt: "Há 3 horas",
   },
-
   {
-    id: "alert-demo-001",
+    id: "alt-001",
     type: "alert",
-    title: "Alerta operacional demonstrativo",
-    description:
-      "Alerta fictício de alta prioridade utilizado para validação visual.",
-    coordinates: [-59.997, -3.087],
-    createdAt: "2026-08-02T13:00:00-04:00",
-    priority: "high",
-    status: "Ativo",
-    reference: "ALT-DEMO-001",
-    locationLabel: "Área demonstrativa nordeste",
+    title: "Alerta Prioritário de Área",
+    description: "Aumento de movimentação atípica no perímetro.",
+    address: "Av. Torquato Tapajós, Flores",
+    neighborhood: "Flores",
+    zone: "Centro-Sul",
+    coordinates: [-60.028, -3.068],
+    updatedAt: "Há 10 minutos",
   },
 ];
