@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Photo = {
@@ -866,6 +867,12 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
                   />
                   <OrganizationInfo label="Fonte" value={organization.source} />
                 </div>
+                <Link
+                  href={`/intelligence/organizations/${organization.organizationRecordId}`}
+                  className="mt-5 inline-flex rounded-xl bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
+                >
+                  Abrir ficha da organização
+                </Link>
               </article>
             ))
           )}
