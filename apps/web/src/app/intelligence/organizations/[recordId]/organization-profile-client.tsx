@@ -69,6 +69,13 @@ export function OrganizationProfileClient({ recordId }: { recordId: string }) {
   }
   if (!organization) return null;
 
+  const distinctIndividualCount = new Set(
+    organization.links.map((link) => link.individualRecordId),
+  ).size;
+  const verifiedLinkCount = organization.links.filter((link) =>
+    link.verificationStatus?.toLocaleLowerCase("pt-BR").includes("verific"),
+  ).length;
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-7 px-6 py-10">
       <section className="rounded-3xl border border-violet-400/20 bg-gradient-to-r from-slate-900 to-violet-950/40 p-8">
@@ -84,6 +91,21 @@ export function OrganizationProfileClient({ recordId }: { recordId: string }) {
             {auditPersisted ? "Acesso auditado" : "Auditoria pendente"}
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+          <p className="text-sm uppercase tracking-[0.14em] text-slate-500">Vínculos explícitos</p>
+          <p className="mt-2 text-3xl font-bold text-cyan-300">{organization.links.length}</p>
+        </article>
+        <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+          <p className="text-sm uppercase tracking-[0.14em] text-slate-500">Pessoas distintas</p>
+          <p className="mt-2 text-3xl font-bold text-violet-300">{distinctIndividualCount}</p>
+        </article>
+        <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+          <p className="text-sm uppercase tracking-[0.14em] text-slate-500">Vínculos verificados</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-300">{verifiedLinkCount}</p>
+        </article>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
