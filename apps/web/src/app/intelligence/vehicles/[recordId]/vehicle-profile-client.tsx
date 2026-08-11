@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Vehicle = {
@@ -17,11 +18,19 @@ type Payload = {
   success: boolean;
   auditPersisted?: boolean;
   vehicle?: Vehicle;
+  linkedIndividuals?: LinkedIndividual[];
   message?: string;
+};
+
+type LinkedIndividual = {
+  recordId: string;
+  legalName: string;
+  alias: string | null;
 };
 
 export function VehicleProfileClient({ recordId }: { recordId: string }) {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [linkedIndividuals, setLinkedIndividuals] = useState<LinkedIndividual[]>([]);
   const [status, setStatus] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -38,6 +47,7 @@ export function VehicleProfileClient({ recordId }: { recordId: string }) {
             throw new Error(payload.message || "Falha ao consultar o veículo.");
           }
           setVehicle(payload.vehicle);
+          setLinkedIndividuals(payload.linkedIndividuals || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setStatus("");
         })
@@ -80,6 +90,42 @@ export function VehicleProfileClient({ recordId }: { recordId: string }) {
         <Field label="Ano" value={vehicle.year ? String(vehicle.year) : null} />
         <Field label="Situação" value={vehicle.status} />
         <Field label="Tipo de vínculo" value={vehicle.relationshipType} />
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="flex items-center justify-between border-b border-slate-800 p-6">
+          <div>
+            <h3 className="text-2xl font-semibold text-white">Pessoas vinculadas</h3>
+            <p className="mt-2 text-slate-400">Vínculos explicitamente registrados na fonte, sem inferência automática.</p>
+          </div>
+          <span className="rounded-full bg-cyan-950 px-4 py-2 font-semibold text-cyan-300">
+            {linkedIndividuals.length} vinculada(s)
+          </span>
+        </div>
+
+        {linkedIndividuals.length === 0 ? (
+          <p className="p-6 text-slate-400">Nenhuma pessoa explicitamente vinculada foi localizada.</p>
+        ) : (
+          <div className="grid gap-4 p-6 md:grid-cols-2">
+            {linkedIndividuals.map((individual) => (
+              <article key={individual.recordId} className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-400">Identidade protegida</p>
+                <h4 className="mt-3 text-xl font-semibold text-white">{individual.legalName}</h4>
+                <p className="mt-1 text-slate-400">{individual.alias || "Sem vulgo informado"}</p>
+                <Link
+                  href={`/intelligence/individuals/${individual.recordId}`}
+                  className="mt-5 inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-300"
+                >
+                  Abrir ficha individual
+                </Link>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <p className="border-t border-slate-800 px-6 py-4 text-sm text-amber-300">
+          Proteção ativa: CPF, RG, documentos e observações de vínculo não são enviados ao navegador.
+        </p>
       </section>
 
       <section className="rounded-2xl border border-amber-400/30 bg-amber-950/20 p-6">

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { getVehicleDirectoryEntry } from "@/features/intelligence/vehicle-directory";
+import { listIndividualsForVehicle } from "@/features/intelligence/vehicle-individual-links";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,10 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const vehicle = await getVehicleDirectoryEntry(recordId);
+    const [vehicle, linkedIndividuals] = await Promise.all([
+      getVehicleDirectoryEntry(recordId),
+      listIndividualsForVehicle(recordId),
+    ]);
     if (!vehicle) {
       return NextResponse.json(
         { success: false, correlationId, message: "Veículo não encontrado." },
@@ -42,7 +46,7 @@ export async function GET(
     }));
 
     return NextResponse.json(
-      { success: true, auditPersisted, correlationId, vehicle },
+      { success: true, auditPersisted, correlationId, vehicle, linkedIndividuals },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {
