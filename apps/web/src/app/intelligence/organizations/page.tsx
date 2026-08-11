@@ -12,6 +12,7 @@ export default function OrganizationDirectoryPage() {
             <h1 className="mt-1 text-xl font-semibold">Banco de Inteligência</h1>
           </div>
           <div className="flex gap-3">
+            <Link href="/intelligence/vehicles" className="rounded-xl border border-cyan-400/50 px-4 py-2.5 text-cyan-200 hover:border-cyan-300">Veículos</Link>
             <Link href="/intelligence/individuals" className="rounded-xl bg-cyan-500 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-400">Indivíduos</Link>
             <Link href="/identification-dashboard" className="rounded-xl border border-slate-700 px-4 py-2.5 hover:border-cyan-400">Painel de identificação</Link>
           </div>
