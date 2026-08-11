@@ -24,6 +24,7 @@ const SENSITIVE_KEY_SEGMENTS = new Set([
   "senha",
   "token",
   "secret",
+  "document",
   "documento",
 ]);
 

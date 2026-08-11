@@ -3,6 +3,7 @@ import "server-only";
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
 import { maskVehiclePlate } from "@/features/intelligence/vehicle-directory-policy";
+import { classifyWarrantAttention } from "@/features/intelligence/warrant-monitoring";
 
 import { isCoordinateConsistentWithNeighborhood } from "./geographic-consistency";
 import type {
@@ -54,6 +55,16 @@ type AirtableVehicleFields = Record<string, unknown> & {
   Situação?: string;
   "Tipo de Vínculo"?: string;
   "Data da Informação"?: string;
+  Endereços?: string[];
+};
+
+type AirtableWarrantFields = Record<string, unknown> & {
+  "Número do Mandado"?: string;
+  "Número do Processo"?: string;
+  "Tipo de Mandado"?: string;
+  "Data de Emissão"?: string;
+  "Data de Validade"?: string;
+  "Status do Mandado"?: string;
   Endereços?: string[];
 };
 
@@ -204,6 +215,68 @@ function linkedRecordIds(
   }
 
   return [...linkedIds];
+}
+
+function maskReference(value: unknown, fallback: string): string {
+  const reference = normalizeText(value).replace(/\s/g, "");
+  if (!reference) return fallback;
+  if (reference.length <= 4) return "•".repeat(reference.length);
+  return `${"•".repeat(Math.min(reference.length - 4, 10))}${reference.slice(-4)}`;
+}
+
+function mapWarrantToAlert(
+  warrantRecord: AirtableRecord<AirtableWarrantFields>,
+  addressRecord: AirtableRecord<AirtableAddressFields>,
+  now = new Date(),
+): OperationalEntity | null {
+  const coordinates = getValidCoordinates(
+    addressRecord.fields.Latitude,
+    addressRecord.fields.Longitude,
+  );
+
+  if (
+    !coordinates ||
+    !isCoordinateConsistentWithNeighborhood({
+      neighborhood: addressRecord.fields.Bairro,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    })
+  ) {
+    return null;
+  }
+
+  const status = normalizeText(warrantRecord.fields["Status do Mandado"]);
+  const expiresAt = normalizeText(warrantRecord.fields["Data de Validade"]);
+  const attention = classifyWarrantAttention(status || null, expiresAt || null, now);
+  if (attention !== "active" && attention !== "expiring") return null;
+
+  const issuedAt = normalizeText(warrantRecord.fields["Data de Emissão"]);
+  const parsedIssuedAt = issuedAt ? new Date(issuedAt) : null;
+  const warrantType = normalizeText(warrantRecord.fields["Tipo de Mandado"]);
+  const maskedWarrant = maskReference(
+    warrantRecord.fields["Número do Mandado"],
+    "Mandado sem referência",
+  );
+  const maskedCase = maskReference(
+    warrantRecord.fields["Número do Processo"],
+    "Processo não informado",
+  );
+
+  return {
+    id: `alert:${warrantRecord.id}:${addressRecord.id}`,
+    type: "alert",
+    title: warrantType || "Mandado sob monitoramento",
+    description: `${maskedWarrant} — ${maskedCase}`,
+    coordinates,
+    createdAt:
+      parsedIssuedAt && !Number.isNaN(parsedIssuedAt.getTime())
+        ? parsedIssuedAt.toISOString()
+        : warrantRecord.createdTime,
+    priority: attention === "expiring" ? "high" : "medium",
+    status: status || "Vigência requer verificação",
+    reference: warrantRecord.id,
+    locationLabel: buildAddressLabel(addressRecord.fields) || "Localização não informada",
+  };
 }
 
 function mapIndividualToEntity(
@@ -473,7 +546,13 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
 > {
   const configuration = getAirtableConfiguration();
 
-  const [occurrenceRecords, addressRecords, individualRecords, vehicleRecords] =
+  const [
+    occurrenceRecords,
+    addressRecords,
+    individualRecords,
+    vehicleRecords,
+    warrantRecords,
+  ] =
     await Promise.all([
       listAllAirtableRecords<AirtableOccurrenceFields>(
         configuration.occurrencesTableId,
@@ -518,6 +597,13 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
 
       listAllAirtableRecords<AirtableVehicleFields>(
         configuration.vehiclesTableId,
+        {
+          baseId: configuration.individualsPreviewBaseId,
+        },
+      ),
+
+      listAllAirtableRecords<AirtableWarrantFields>(
+        configuration.warrantsTableId,
         {
           baseId: configuration.individualsPreviewBaseId,
         },
@@ -580,7 +666,44 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
     }
   }
 
+  const warrantsByRecordId = new Map(
+    warrantRecords.map((record) => [record.id, record]),
+  );
   const addressRecordIds = new Set(addressesByRecordId.keys());
+  const warrantRecordIds = new Set(warrantsByRecordId.keys());
+  const linkedWarrantAddressPairs = new Set<string>();
+
+  const addWarrantAtAddress = (warrantRecordId: string, addressRecordId: string) => {
+    const pairKey = `${warrantRecordId}:${addressRecordId}`;
+    if (linkedWarrantAddressPairs.has(pairKey)) return;
+
+    const warrantRecord = warrantsByRecordId.get(warrantRecordId);
+    const addressRecord = addressesByRecordId.get(addressRecordId);
+    if (!warrantRecord || !addressRecord) return;
+
+    linkedWarrantAddressPairs.add(pairKey);
+    const entity = mapWarrantToAlert(warrantRecord, addressRecord);
+    if (entity) entities.push(entity);
+  };
+
+  for (const warrantRecord of warrantRecords) {
+    for (const addressRecordId of linkedRecordIds(
+      warrantRecord.fields,
+      addressRecordIds,
+    )) {
+      addWarrantAtAddress(warrantRecord.id, addressRecordId);
+    }
+  }
+
+  for (const addressRecord of addressRecords) {
+    for (const warrantRecordId of linkedRecordIds(
+      addressRecord.fields,
+      warrantRecordIds,
+    )) {
+      addWarrantAtAddress(warrantRecordId, addressRecord.id);
+    }
+  }
+
   const vehiclesByRecordId = new Map(
     vehicleRecords.map((record) => [record.id, record]),
   );
