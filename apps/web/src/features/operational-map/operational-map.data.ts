@@ -30,6 +30,12 @@ export const OPERATIONAL_ENTITY_CONFIG: Record<
     color: "#a78bfa",
   },
 
+  organization: {
+    label: "Organizações",
+    singularLabel: "Organização",
+    color: "#14b8a6",
+  },
+
   alert: {
     label: "Alertas",
     singularLabel: "Alerta",

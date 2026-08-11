@@ -19,5 +19,9 @@ export function getOperationalEntityProfileHref(
     return `/intelligence/vehicles/${entity.reference}`;
   }
 
+  if (entity.type === "organization") {
+    return `/intelligence/organizations/${entity.reference}`;
+  }
+
   return null;
 }

@@ -8,6 +8,7 @@ import { MANAUS_CENTER } from "@/features/operational-map/operational-map.data";
 import { isCoordinateConsistentWithNeighborhood } from "@/features/operational-map/geographic-consistency";
 import { DEMO_OPERATIONAL_ZONES } from "@/features/operational-map/operational-map.zones";
 import { useOperationalZones } from "@/features/operational-map/use-operational-zones";
+import { useOperationalConnections } from "@/features/operational-map/use-operational-connections";
 
 import type {
   OperationalEntity,
@@ -64,6 +65,7 @@ const INITIAL_LAYER_VISIBILITY: OperationalLayerVisibility = {
   occurrence: true,
   person: true,
   vehicle: true,
+  organization: true,
   alert: true,
 };
 
@@ -429,6 +431,13 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     onSelectEntity: selectEntity,
   });
 
+  const { visibleConnectionCount } = useOperationalConnections({
+    map,
+    entities: visibleEntities,
+    selectedEntityId,
+    enabled: mapStatus === "ready" && entitiesStatus === "success",
+  });
+
   function toggleLayer(type: OperationalEntityType) {
     const layerWillBeHidden = layers[type];
 
@@ -447,6 +456,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       occurrence: true,
       person: true,
       vehicle: true,
+      organization: true,
       alert: true,
     });
   }
@@ -456,6 +466,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       occurrence: false,
       person: false,
       vehicle: false,
+      organization: false,
       alert: false,
     });
 
@@ -528,6 +539,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       <OperationalLayersPanel
         entities={allEntities}
         layers={layers}
+        visibleConnectionCount={visibleConnectionCount}
         dataStatus={entitiesStatus}
         generatedAt={generatedAt}
         onToggleLayer={toggleLayer}

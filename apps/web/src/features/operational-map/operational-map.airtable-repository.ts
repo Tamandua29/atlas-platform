@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
 import { maskVehiclePlate } from "@/features/intelligence/vehicle-directory-policy";
@@ -68,6 +70,19 @@ type AirtableWarrantFields = Record<string, unknown> & {
   Endereços?: string[];
 };
 
+type AirtableOrganizationFields = {
+  "Nome da Organização"?: string;
+  Sigla?: string;
+  Tipo?: string;
+  Situação?: string;
+};
+
+type AirtableOrganizationalLinkFields = {
+  Indivíduo?: string[];
+  Organização?: string[];
+  "Registro Ativo"?: boolean;
+};
+
 type AirtableRecord<Fields> = {
   id: string;
   createdTime: string;
@@ -90,6 +105,13 @@ function normalizeText(value: unknown): string {
   }
 
   return "";
+}
+
+function relationshipKey(kind: string, recordId: string): string {
+  return createHash("sha256")
+    .update(`${kind}:${recordId}`)
+    .digest("hex")
+    .slice(0, 20);
 }
 
 function determinePriority(
@@ -247,7 +269,11 @@ function mapWarrantToAlert(
 
   const status = normalizeText(warrantRecord.fields["Status do Mandado"]);
   const expiresAt = normalizeText(warrantRecord.fields["Data de Validade"]);
-  const attention = classifyWarrantAttention(status || null, expiresAt || null, now);
+  const attention = classifyWarrantAttention(
+    status || null,
+    expiresAt || null,
+    now,
+  );
   if (attention !== "active" && attention !== "expiring") return null;
 
   const issuedAt = normalizeText(warrantRecord.fields["Data de Emissão"]);
@@ -275,7 +301,9 @@ function mapWarrantToAlert(
     priority: attention === "expiring" ? "high" : "medium",
     status: status || "Vigência requer verificação",
     reference: warrantRecord.id,
-    locationLabel: buildAddressLabel(addressRecord.fields) || "Localização não informada",
+    locationLabel:
+      buildAddressLabel(addressRecord.fields) || "Localização não informada",
+    relationshipKeys: [relationshipKey("address", addressRecord.id)],
   };
 }
 
@@ -324,17 +352,78 @@ function mapIndividualToEntity(
     reference: individualRecord.id,
     locationLabel:
       buildAddressLabel(addressRecord.fields) || "Localização não informada",
+    relationshipKeys: [
+      relationshipKey("individual", individualRecord.id),
+      relationshipKey("address", addressRecord.id),
+    ],
+  };
+}
+
+function mapOrganizationToEntity(
+  organizationRecord: AirtableRecord<AirtableOrganizationFields>,
+  addressRecord: AirtableRecord<AirtableAddressFields>,
+  individualRecordId: string,
+): OperationalEntity | null {
+  const name = normalizeText(organizationRecord.fields["Nome da Organização"]);
+  const coordinates = getValidCoordinates(
+    addressRecord.fields.Latitude,
+    addressRecord.fields.Longitude,
+  );
+
+  if (
+    !name ||
+    !coordinates ||
+    !isCoordinateConsistentWithNeighborhood({
+      neighborhood: addressRecord.fields.Bairro,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    })
+  ) {
+    return null;
+  }
+
+  const acronym = normalizeText(organizationRecord.fields.Sigla);
+  const organizationType = normalizeText(organizationRecord.fields.Tipo);
+  const status =
+    normalizeText(organizationRecord.fields.Situação) ||
+    "Situação não informada";
+
+  return {
+    id: `organization:${organizationRecord.id}:${addressRecord.id}`,
+    type: "organization",
+    title: acronym ? `${name} (${acronym})` : name,
+    description: organizationType || "Organização explicitamente vinculada.",
+    coordinates,
+    createdAt: organizationRecord.createdTime,
+    priority: "normal",
+    status,
+    reference: organizationRecord.id,
+    locationLabel:
+      buildAddressLabel(addressRecord.fields) || "Localização não informada",
+    relationshipKeys: [
+      relationshipKey("organization", organizationRecord.id),
+      relationshipKey("individual", individualRecordId),
+      relationshipKey("address", addressRecord.id),
+    ],
   };
 }
 
 function vehiclePriority(fields: AirtableVehicleFields): OperationalPriority {
   const status = normalizeText(fields.Situação).toLocaleLowerCase("pt-BR");
 
-  if (["roubad", "furtad", "procurad", "apreendid"].some((term) => status.includes(term))) {
+  if (
+    ["roubad", "furtad", "procurad", "apreendid"].some((term) =>
+      status.includes(term),
+    )
+  ) {
     return "high";
   }
 
-  if (["suspeit", "restrição", "restricao", "irregular"].some((term) => status.includes(term))) {
+  if (
+    ["suspeit", "restrição", "restricao", "irregular"].some((term) =>
+      status.includes(term),
+    )
+  ) {
     return "medium";
   }
 
@@ -344,6 +433,7 @@ function vehiclePriority(fields: AirtableVehicleFields): OperationalPriority {
 function mapVehicleToEntity(
   vehicleRecord: AirtableRecord<AirtableVehicleFields>,
   addressRecord: AirtableRecord<AirtableAddressFields>,
+  individualRecordIds: string[],
 ): OperationalEntity | null {
   const coordinates = getValidCoordinates(
     addressRecord.fields.Latitude,
@@ -364,12 +454,19 @@ function mapVehicleToEntity(
   const brand = normalizeText(vehicleRecord.fields.Marca);
   const model = normalizeText(vehicleRecord.fields.Modelo);
   const color = normalizeText(vehicleRecord.fields.Cor);
-  const relationshipType = normalizeText(vehicleRecord.fields["Tipo de Vínculo"]);
+  const relationshipType = normalizeText(
+    vehicleRecord.fields["Tipo de Vínculo"],
+  );
   const maskedPlate = maskVehiclePlate(vehicleRecord.fields.Placa);
   const year = vehicleRecord.fields.Ano;
-  const status = normalizeText(vehicleRecord.fields.Situação) || "Situação não informada";
-  const informationDate = normalizeText(vehicleRecord.fields["Data da Informação"]);
-  const parsedInformationDate = informationDate ? new Date(informationDate) : null;
+  const status =
+    normalizeText(vehicleRecord.fields.Situação) || "Situação não informada";
+  const informationDate = normalizeText(
+    vehicleRecord.fields["Data da Informação"],
+  );
+  const parsedInformationDate = informationDate
+    ? new Date(informationDate)
+    : null;
 
   const descriptionParts = [
     maskedPlate,
@@ -382,7 +479,9 @@ function mapVehicleToEntity(
     id: `vehicle:${vehicleRecord.id}:${addressRecord.id}`,
     type: "vehicle",
     title: [brand, model].filter(Boolean).join(" ") || "Veículo monitorado",
-    description: descriptionParts.join(" — ") || "Veículo vinculado ao endereço georreferenciado.",
+    description:
+      descriptionParts.join(" — ") ||
+      "Veículo vinculado ao endereço georreferenciado.",
     coordinates,
     createdAt:
       parsedInformationDate && !Number.isNaN(parsedInformationDate.getTime())
@@ -391,7 +490,15 @@ function mapVehicleToEntity(
     priority: vehiclePriority(vehicleRecord.fields),
     status,
     reference: vehicleRecord.id,
-    locationLabel: buildAddressLabel(addressRecord.fields) || "Localização não informada",
+    locationLabel:
+      buildAddressLabel(addressRecord.fields) || "Localização não informada",
+    relationshipKeys: [
+      relationshipKey("vehicle", vehicleRecord.id),
+      relationshipKey("address", addressRecord.id),
+      ...individualRecordIds.map((recordId) =>
+        relationshipKey("individual", recordId),
+      ),
+    ],
   };
 }
 
@@ -538,6 +645,7 @@ function mapOccurrenceToEntity(
     createdAt: buildCreatedAt(occurrence, occurrenceRecord.createdTime),
     priority: determinePriority(occurrence),
     status,
+    relationshipKeys: [relationshipKey("address", addressRecord.id)],
   };
 }
 
@@ -552,63 +660,80 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
     individualRecords,
     vehicleRecords,
     warrantRecords,
-  ] =
-    await Promise.all([
-      listAllAirtableRecords<AirtableOccurrenceFields>(
-        configuration.occurrencesTableId,
-        {
-          fields: [
-            "ID Ocorrência",
-            "Número da Ocorrência",
-            "Data e Hora",
-            "Natureza",
-            "Categoria",
-            "Situação",
-            "Descrição",
-            "Resultado Operacional",
-            "Fonte",
-            "Confiabilidade",
-            "Endereços",
-          ],
+    organizationRecords,
+    organizationalLinkRecords,
+  ] = await Promise.all([
+    listAllAirtableRecords<AirtableOccurrenceFields>(
+      configuration.occurrencesTableId,
+      {
+        fields: [
+          "ID Ocorrência",
+          "Número da Ocorrência",
+          "Data e Hora",
+          "Natureza",
+          "Categoria",
+          "Situação",
+          "Descrição",
+          "Resultado Operacional",
+          "Fonte",
+          "Confiabilidade",
+          "Endereços",
+        ],
 
-          sort: [
-            {
-              field: "Data e Hora",
-              direction: "desc",
-            },
-          ],
-        },
-      ),
+        sort: [
+          {
+            field: "Data e Hora",
+            direction: "desc",
+          },
+        ],
+      },
+    ),
 
-      listAllAirtableRecords<AirtableAddressFields>(
-        configuration.addressesTableId,
-        {
-          baseId: configuration.individualsPreviewBaseId,
-        },
-      ),
+    listAllAirtableRecords<AirtableAddressFields>(
+      configuration.addressesTableId,
+      {
+        baseId: configuration.individualsPreviewBaseId,
+      },
+    ),
 
-      listAllAirtableRecords<AirtableIndividualFields>(
-        configuration.individualsTableId,
-        {
-          baseId: configuration.individualsPreviewBaseId,
-          fields: ["Nome Completo", "Vulgo Principal"],
-        },
-      ),
+    listAllAirtableRecords<AirtableIndividualFields>(
+      configuration.individualsTableId,
+      {
+        baseId: configuration.individualsPreviewBaseId,
+        fields: ["Nome Completo", "Vulgo Principal"],
+      },
+    ),
 
-      listAllAirtableRecords<AirtableVehicleFields>(
-        configuration.vehiclesTableId,
-        {
-          baseId: configuration.individualsPreviewBaseId,
-        },
-      ),
+    listAllAirtableRecords<AirtableVehicleFields>(
+      configuration.vehiclesTableId,
+      {
+        baseId: configuration.individualsPreviewBaseId,
+      },
+    ),
 
-      listAllAirtableRecords<AirtableWarrantFields>(
-        configuration.warrantsTableId,
-        {
-          baseId: configuration.individualsPreviewBaseId,
-        },
-      ),
-    ]);
+    listAllAirtableRecords<AirtableWarrantFields>(
+      configuration.warrantsTableId,
+      {
+        baseId: configuration.individualsPreviewBaseId,
+      },
+    ),
+
+    listAllAirtableRecords<AirtableOrganizationFields>(
+      configuration.organizationsTableId,
+      {
+        baseId: configuration.baseId,
+        fields: ["Nome da Organização", "Sigla", "Tipo", "Situação"],
+      },
+    ),
+
+    listAllAirtableRecords<AirtableOrganizationalLinkFields>(
+      configuration.organizationalLinksTableId,
+      {
+        baseId: configuration.baseId,
+        fields: ["Indivíduo", "Organização", "Registro Ativo"],
+      },
+    ),
+  ]);
 
   const addressesByRecordId = new Map<
     string,
@@ -646,12 +771,23 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
     individualRecords.map((record) => [record.id, record]),
   );
   const individualRecordIds = new Set(individualsByRecordId.keys());
+  const addressesByIndividualRecordId = new Map<
+    string,
+    AirtableRecord<AirtableAddressFields>[]
+  >();
 
   for (const addressRecord of addressRecords) {
-    for (const individualRecordId of linkedIndividualRecordIds(
+    const linkedIndividualIds = linkedIndividualRecordIds(
       addressRecord.fields,
       individualRecordIds,
-    )) {
+    );
+
+    for (const individualRecordId of linkedIndividualIds) {
+      const linkedAddresses =
+        addressesByIndividualRecordId.get(individualRecordId) ?? [];
+      linkedAddresses.push(addressRecord);
+      addressesByIndividualRecordId.set(individualRecordId, linkedAddresses);
+
       const individualRecord = individualsByRecordId.get(individualRecordId);
 
       if (!individualRecord) {
@@ -666,6 +802,44 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
     }
   }
 
+  const organizationsByRecordId = new Map(
+    organizationRecords.map((record) => [record.id, record]),
+  );
+  const organizationAddressPairs = new Set<string>();
+
+  for (const linkRecord of organizationalLinkRecords) {
+    if (linkRecord.fields["Registro Ativo"] === false) continue;
+
+    const linkedIndividualIds = linkRecord.fields.Indivíduo ?? [];
+    const linkedOrganizationIds = linkRecord.fields.Organização ?? [];
+
+    for (const organizationRecordId of linkedOrganizationIds) {
+      const organizationRecord =
+        organizationsByRecordId.get(organizationRecordId);
+      if (!organizationRecord) continue;
+
+      for (const individualRecordId of linkedIndividualIds) {
+        const linkedAddresses =
+          addressesByIndividualRecordId.get(individualRecordId) ?? [];
+
+        for (const addressRecord of linkedAddresses) {
+          const pairKey = `${organizationRecordId}:${addressRecord.id}`;
+          if (organizationAddressPairs.has(pairKey)) continue;
+
+          const entity = mapOrganizationToEntity(
+            organizationRecord,
+            addressRecord,
+            individualRecordId,
+          );
+          if (!entity) continue;
+
+          organizationAddressPairs.add(pairKey);
+          entities.push(entity);
+        }
+      }
+    }
+  }
+
   const warrantsByRecordId = new Map(
     warrantRecords.map((record) => [record.id, record]),
   );
@@ -673,7 +847,10 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
   const warrantRecordIds = new Set(warrantsByRecordId.keys());
   const linkedWarrantAddressPairs = new Set<string>();
 
-  const addWarrantAtAddress = (warrantRecordId: string, addressRecordId: string) => {
+  const addWarrantAtAddress = (
+    warrantRecordId: string,
+    addressRecordId: string,
+  ) => {
     const pairKey = `${warrantRecordId}:${addressRecordId}`;
     if (linkedWarrantAddressPairs.has(pairKey)) return;
 
@@ -710,7 +887,10 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
   const vehicleRecordIds = new Set(vehiclesByRecordId.keys());
   const linkedVehicleAddressPairs = new Set<string>();
 
-  const addVehicleAtAddress = (vehicleRecordId: string, addressRecordId: string) => {
+  const addVehicleAtAddress = (
+    vehicleRecordId: string,
+    addressRecordId: string,
+  ) => {
     const pairKey = `${vehicleRecordId}:${addressRecordId}`;
     if (linkedVehicleAddressPairs.has(pairKey)) return;
 
@@ -719,7 +899,15 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
     if (!vehicleRecord || !addressRecord) return;
 
     linkedVehicleAddressPairs.add(pairKey);
-    const entity = mapVehicleToEntity(vehicleRecord, addressRecord);
+    const linkedIndividualIds = linkedRecordIds(
+      vehicleRecord.fields,
+      individualRecordIds,
+    );
+    const entity = mapVehicleToEntity(
+      vehicleRecord,
+      addressRecord,
+      linkedIndividualIds,
+    );
     if (entity) entities.push(entity);
   };
 

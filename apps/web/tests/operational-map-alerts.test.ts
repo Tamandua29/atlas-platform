@@ -5,7 +5,9 @@ const { listAllAirtableRecords } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("../src/lib/airtable/airtable.client", () => ({ listAllAirtableRecords }));
+vi.mock("../src/lib/airtable/airtable.client", () => ({
+  listAllAirtableRecords,
+}));
 vi.mock("../src/lib/airtable/airtable.config", () => ({
   getAirtableConfiguration: () => ({
     occurrencesTableId: "occurrences",
@@ -13,6 +15,9 @@ vi.mock("../src/lib/airtable/airtable.config", () => ({
     individualsTableId: "individuals",
     vehiclesTableId: "vehicles",
     warrantsTableId: "warrants",
+    organizationsTableId: "organizations",
+    organizationalLinksTableId: "organizational-links",
+    baseId: "operational-base",
     individualsPreviewBaseId: "intelligence-base",
   }),
 }));
@@ -44,20 +49,24 @@ describe("operational map alert repository", () => {
 
   it("cria alerta georreferenciado sem expor números integrais", async () => {
     mockTables(
-      [record("address-1", {
-        "Endereço Completo": "Rua Teste, 100 — Japiim — Manaus",
-        Bairro: "Japiim",
-        Latitude: -3.101,
-        Longitude: -59.982,
-      })],
-      [record("warrant-1", {
-        "Número do Mandado": "MANDADO-123456789",
-        "Número do Processo": "PROCESSO-987654321",
-        "Tipo de Mandado": "Mandado de prisão",
-        "Status do Mandado": "Vigente",
-        "Data de Emissão": "2026-08-01",
-        Endereços: ["address-1"],
-      })],
+      [
+        record("address-1", {
+          "Endereço Completo": "Rua Teste, 100 — Japiim — Manaus",
+          Bairro: "Japiim",
+          Latitude: -3.101,
+          Longitude: -59.982,
+        }),
+      ],
+      [
+        record("warrant-1", {
+          "Número do Mandado": "MANDADO-123456789",
+          "Número do Processo": "PROCESSO-987654321",
+          "Tipo de Mandado": "Mandado de prisão",
+          "Status do Mandado": "Vigente",
+          "Data de Emissão": "2026-08-01",
+          Endereços: ["address-1"],
+        }),
+      ],
     );
 
     const entities = await loadOperationalEntitiesFromAirtable();
@@ -81,12 +90,14 @@ describe("operational map alert repository", () => {
 
   it("não publica mandado encerrado ou vencido como alerta", async () => {
     mockTables(
-      [record("address-1", {
-        Bairro: "Japiim",
-        Latitude: -3.101,
-        Longitude: -59.982,
-        Mandados: ["warrant-closed", "warrant-expired"],
-      })],
+      [
+        record("address-1", {
+          Bairro: "Japiim",
+          Latitude: -3.101,
+          Longitude: -59.982,
+          Mandados: ["warrant-closed", "warrant-expired"],
+        }),
+      ],
       [
         record("warrant-closed", { "Status do Mandado": "Cumprido" }),
         record("warrant-expired", {

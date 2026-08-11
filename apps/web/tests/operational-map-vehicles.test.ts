@@ -17,6 +17,9 @@ vi.mock("../src/lib/airtable/airtable.config", () => ({
     individualsTableId: "individuals",
     vehiclesTableId: "vehicles",
     warrantsTableId: "warrants",
+    organizationsTableId: "organizations",
+    organizationalLinksTableId: "organizational-links",
+    baseId: "operational-base",
     individualsPreviewBaseId: "intelligence-base",
   }),
 }));

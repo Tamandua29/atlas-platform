@@ -21,11 +21,21 @@ describe("operational entity profile link", () => {
     ).toBe("/intelligence/vehicles/recVehicle1234567");
   });
 
+  it("routes an organization record to the protected organization profile", () => {
+    expect(
+      getOperationalEntityProfileHref({
+        type: "organization",
+        reference: "recOrganization001",
+      }),
+    ).toBe("/intelligence/organizations/recOrganization001");
+  });
+
   it.each([
     { type: "occurrence" as const, reference: "recOccurrence1234" },
     { type: "alert" as const, reference: "recAlert123456789" },
     { type: "person" as const, reference: "PER-DEMO-001" },
     { type: "vehicle" as const, reference: "VEI-DEMO-001" },
+    { type: "organization" as const, reference: "ORG-DEMO-001" },
   ])("does not expose a profile link for $type/$reference", (entity) => {
     expect(getOperationalEntityProfileHref(entity)).toBeNull();
   });

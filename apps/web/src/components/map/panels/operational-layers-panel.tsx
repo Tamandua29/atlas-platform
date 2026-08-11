@@ -15,6 +15,7 @@ type DataStatus =
 type OperationalLayersPanelProps = {
   entities: OperationalEntity[];
   layers: OperationalLayerVisibility;
+  visibleConnectionCount: number;
   dataStatus: DataStatus;
   generatedAt: string | null;
   onToggleLayer: (
@@ -84,6 +85,7 @@ function getStatusIndicatorClassName(
 export function OperationalLayersPanel({
   entities,
   layers,
+  visibleConnectionCount,
   dataStatus,
   generatedAt,
   onToggleLayer,
@@ -201,6 +203,24 @@ export function OperationalLayersPanel({
           >
             Ocultar todas
           </button>
+        </div>
+
+        <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-medium text-cyan-200">
+              Ligações visíveis
+            </span>
+
+            <span className="rounded-md bg-cyan-400/10 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
+              {visibleConnectionCount}
+            </span>
+          </div>
+
+          <p className="mt-1 text-[9px] leading-3 text-slate-500">
+            {visibleConnectionCount > 0
+              ? "Linhas geradas por vínculos explícitos entre registros localizados."
+              : "As linhas surgem quando registros vinculados possuem locais distintos."}
+          </p>
         </div>
 
         <button
