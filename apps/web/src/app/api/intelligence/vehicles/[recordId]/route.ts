@@ -5,6 +5,7 @@ import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
 import { getVehicleDirectoryEntry } from "@/features/intelligence/vehicle-directory";
 import { listIndividualsForVehicle } from "@/features/intelligence/vehicle-individual-links";
+import { listOccurrencesForVehicle } from "@/features/intelligence/vehicle-occurrence-links";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,10 @@ export async function GET(
   const correlationId = crypto.randomUUID();
 
   try {
-    const [vehicle, linkedIndividuals] = await Promise.all([
+    const [vehicle, linkedIndividuals, linkedOccurrences] = await Promise.all([
       getVehicleDirectoryEntry(recordId),
       listIndividualsForVehicle(recordId),
+      listOccurrencesForVehicle(recordId),
     ]);
     if (!vehicle) {
       return NextResponse.json(
@@ -46,7 +48,14 @@ export async function GET(
     }));
 
     return NextResponse.json(
-      { success: true, auditPersisted, correlationId, vehicle, linkedIndividuals },
+      {
+        success: true,
+        auditPersisted,
+        correlationId,
+        vehicle,
+        linkedIndividuals,
+        linkedOccurrences,
+      },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {

@@ -19,6 +19,7 @@ type Payload = {
   auditPersisted?: boolean;
   vehicle?: Vehicle;
   linkedIndividuals?: LinkedIndividual[];
+  linkedOccurrences?: LinkedOccurrence[];
   message?: string;
 };
 
@@ -28,9 +29,18 @@ type LinkedIndividual = {
   alias: string | null;
 };
 
+type LinkedOccurrence = {
+  recordId: string;
+  maskedOccurrenceNumber: string;
+  occurredAt: string | null;
+  category: string | null;
+  status: string | null;
+};
+
 export function VehicleProfileClient({ recordId }: { recordId: string }) {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [linkedIndividuals, setLinkedIndividuals] = useState<LinkedIndividual[]>([]);
+  const [linkedOccurrences, setLinkedOccurrences] = useState<LinkedOccurrence[]>([]);
   const [status, setStatus] = useState("Carregando ficha protegida...");
   const [auditPersisted, setAuditPersisted] = useState(false);
 
@@ -48,6 +58,7 @@ export function VehicleProfileClient({ recordId }: { recordId: string }) {
           }
           setVehicle(payload.vehicle);
           setLinkedIndividuals(payload.linkedIndividuals || []);
+          setLinkedOccurrences(payload.linkedOccurrences || []);
           setAuditPersisted(Boolean(payload.auditPersisted));
           setStatus("");
         })
@@ -128,6 +139,43 @@ export function VehicleProfileClient({ recordId }: { recordId: string }) {
         </p>
       </section>
 
+      <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
+        <div className="flex items-center justify-between border-b border-slate-800 p-6">
+          <div>
+            <h3 className="text-2xl font-semibold text-white">Ocorrências vinculadas</h3>
+            <p className="mt-2 text-slate-400">Referências explicitamente relacionadas ao veículo.</p>
+          </div>
+          <span className="rounded-full bg-rose-950 px-4 py-2 font-semibold text-rose-300">
+            {linkedOccurrences.length} vinculada(s)
+          </span>
+        </div>
+
+        {linkedOccurrences.length === 0 ? (
+          <p className="p-6 text-slate-400">Nenhuma ocorrência explicitamente vinculada foi localizada.</p>
+        ) : (
+          <div className="grid gap-4 p-6 md:grid-cols-2">
+            {linkedOccurrences.map((occurrence) => (
+              <article key={occurrence.recordId} className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-rose-300">
+                  {occurrence.category || "Ocorrência"}
+                </p>
+                <h4 className="mt-3 text-xl font-semibold text-white">
+                  {occurrence.maskedOccurrenceNumber}
+                </h4>
+                <div className="mt-4 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
+                  <FieldValue label="Data" value={formatDate(occurrence.occurredAt)} />
+                  <FieldValue label="Situação" value={occurrence.status} />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <p className="border-t border-slate-800 px-6 py-4 text-sm text-amber-300">
+          Proteção ativa: narrativas, anexos, observações e resultados operacionais não são enviados ao navegador.
+        </p>
+      </section>
+
       <section className="rounded-2xl border border-amber-400/30 bg-amber-950/20 p-6">
         <h3 className="font-semibold text-amber-200">Proteção de identificadores ativa</h3>
         <p className="mt-2 text-sm text-amber-100/80">
@@ -136,6 +184,25 @@ export function VehicleProfileClient({ recordId }: { recordId: string }) {
       </section>
     </div>
   );
+}
+
+function FieldValue({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <p className="uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="mt-1 font-medium text-white">{value || "Não informado"}</p>
+    </div>
+  );
+}
+
+function formatDate(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function Field({ label, value }: { label: string; value: string | null }) {
