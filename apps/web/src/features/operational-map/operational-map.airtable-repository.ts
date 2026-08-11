@@ -2,6 +2,7 @@ import "server-only";
 
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
+import { maskVehiclePlate } from "@/features/intelligence/vehicle-directory-policy";
 
 import { isCoordinateConsistentWithNeighborhood } from "./geographic-consistency";
 import type {
@@ -42,6 +43,18 @@ type AirtableAddressFields = Record<string, unknown> & {
 type AirtableIndividualFields = {
   "Nome Completo"?: string;
   "Vulgo Principal"?: string;
+};
+
+type AirtableVehicleFields = Record<string, unknown> & {
+  Placa?: string;
+  Marca?: string;
+  Modelo?: string;
+  Cor?: string;
+  Ano?: number;
+  Situação?: string;
+  "Tipo de Vínculo"?: string;
+  "Data da Informação"?: string;
+  Endereços?: string[];
 };
 
 type AirtableRecord<Fields> = {
@@ -174,6 +187,25 @@ function linkedIndividualRecordIds(
   return [...linkedIds];
 }
 
+function linkedRecordIds(
+  fields: Record<string, unknown>,
+  allowedRecordIds: Set<string>,
+): string[] {
+  const linkedIds = new Set<string>();
+
+  for (const value of Object.values(fields)) {
+    if (!Array.isArray(value)) continue;
+
+    for (const candidate of value) {
+      if (typeof candidate === "string" && allowedRecordIds.has(candidate)) {
+        linkedIds.add(candidate);
+      }
+    }
+  }
+
+  return [...linkedIds];
+}
+
 function mapIndividualToEntity(
   individualRecord: AirtableRecord<AirtableIndividualFields>,
   addressRecord: AirtableRecord<AirtableAddressFields>,
@@ -219,6 +251,74 @@ function mapIndividualToEntity(
     reference: individualRecord.id,
     locationLabel:
       buildAddressLabel(addressRecord.fields) || "Localização não informada",
+  };
+}
+
+function vehiclePriority(fields: AirtableVehicleFields): OperationalPriority {
+  const status = normalizeText(fields.Situação).toLocaleLowerCase("pt-BR");
+
+  if (["roubad", "furtad", "procurad", "apreendid"].some((term) => status.includes(term))) {
+    return "high";
+  }
+
+  if (["suspeit", "restrição", "restricao", "irregular"].some((term) => status.includes(term))) {
+    return "medium";
+  }
+
+  return "normal";
+}
+
+function mapVehicleToEntity(
+  vehicleRecord: AirtableRecord<AirtableVehicleFields>,
+  addressRecord: AirtableRecord<AirtableAddressFields>,
+): OperationalEntity | null {
+  const coordinates = getValidCoordinates(
+    addressRecord.fields.Latitude,
+    addressRecord.fields.Longitude,
+  );
+
+  if (
+    !coordinates ||
+    !isCoordinateConsistentWithNeighborhood({
+      neighborhood: addressRecord.fields.Bairro,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    })
+  ) {
+    return null;
+  }
+
+  const brand = normalizeText(vehicleRecord.fields.Marca);
+  const model = normalizeText(vehicleRecord.fields.Modelo);
+  const color = normalizeText(vehicleRecord.fields.Cor);
+  const relationshipType = normalizeText(vehicleRecord.fields["Tipo de Vínculo"]);
+  const maskedPlate = maskVehiclePlate(vehicleRecord.fields.Placa);
+  const year = vehicleRecord.fields.Ano;
+  const status = normalizeText(vehicleRecord.fields.Situação) || "Situação não informada";
+  const informationDate = normalizeText(vehicleRecord.fields["Data da Informação"]);
+  const parsedInformationDate = informationDate ? new Date(informationDate) : null;
+
+  const descriptionParts = [
+    maskedPlate,
+    color ? `Cor: ${color}` : "",
+    typeof year === "number" && Number.isInteger(year) ? `Ano: ${year}` : "",
+    relationshipType ? `Vínculo: ${relationshipType}` : "",
+  ].filter(Boolean);
+
+  return {
+    id: `vehicle:${vehicleRecord.id}:${addressRecord.id}`,
+    type: "vehicle",
+    title: [brand, model].filter(Boolean).join(" ") || "Veículo monitorado",
+    description: descriptionParts.join(" — ") || "Veículo vinculado ao endereço georreferenciado.",
+    coordinates,
+    createdAt:
+      parsedInformationDate && !Number.isNaN(parsedInformationDate.getTime())
+        ? parsedInformationDate.toISOString()
+        : vehicleRecord.createdTime,
+    priority: vehiclePriority(vehicleRecord.fields),
+    status,
+    reference: vehicleRecord.id,
+    locationLabel: buildAddressLabel(addressRecord.fields) || "Localização não informada",
   };
 }
 
@@ -373,7 +473,7 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
 > {
   const configuration = getAirtableConfiguration();
 
-  const [occurrenceRecords, addressRecords, individualRecords] =
+  const [occurrenceRecords, addressRecords, individualRecords, vehicleRecords] =
     await Promise.all([
       listAllAirtableRecords<AirtableOccurrenceFields>(
         configuration.occurrencesTableId,
@@ -413,6 +513,13 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
         {
           baseId: configuration.individualsPreviewBaseId,
           fields: ["Nome Completo", "Vulgo Principal"],
+        },
+      ),
+
+      listAllAirtableRecords<AirtableVehicleFields>(
+        configuration.vehiclesTableId,
+        {
+          baseId: configuration.individualsPreviewBaseId,
         },
       ),
     ]);
@@ -470,6 +577,44 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
       if (entity) {
         entities.push(entity);
       }
+    }
+  }
+
+  const addressRecordIds = new Set(addressesByRecordId.keys());
+  const vehiclesByRecordId = new Map(
+    vehicleRecords.map((record) => [record.id, record]),
+  );
+  const vehicleRecordIds = new Set(vehiclesByRecordId.keys());
+  const linkedVehicleAddressPairs = new Set<string>();
+
+  const addVehicleAtAddress = (vehicleRecordId: string, addressRecordId: string) => {
+    const pairKey = `${vehicleRecordId}:${addressRecordId}`;
+    if (linkedVehicleAddressPairs.has(pairKey)) return;
+
+    const vehicleRecord = vehiclesByRecordId.get(vehicleRecordId);
+    const addressRecord = addressesByRecordId.get(addressRecordId);
+    if (!vehicleRecord || !addressRecord) return;
+
+    linkedVehicleAddressPairs.add(pairKey);
+    const entity = mapVehicleToEntity(vehicleRecord, addressRecord);
+    if (entity) entities.push(entity);
+  };
+
+  for (const vehicleRecord of vehicleRecords) {
+    for (const addressRecordId of linkedRecordIds(
+      vehicleRecord.fields,
+      addressRecordIds,
+    )) {
+      addVehicleAtAddress(vehicleRecord.id, addressRecordId);
+    }
+  }
+
+  for (const addressRecord of addressRecords) {
+    for (const vehicleRecordId of linkedRecordIds(
+      addressRecord.fields,
+      vehicleRecordIds,
+    )) {
+      addVehicleAtAddress(vehicleRecordId, addressRecord.id);
     }
   }
 
