@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { filterVehicleDirectory } from "@/features/intelligence/vehicle-directory-policy";
 
@@ -98,6 +99,12 @@ export function VehicleDirectoryClient() {
               <span className="rounded-lg bg-slate-950/70 p-3">Situação: {vehicle.status || "não informada"}</span>
               <span className="rounded-lg bg-slate-950/70 p-3">Vínculo: {vehicle.relationshipType || "não informado"}</span>
             </div>
+            <Link
+              href={`/intelligence/vehicles/${vehicle.recordId}`}
+              className="mt-5 inline-flex rounded-xl bg-cyan-500 px-4 py-2.5 font-semibold text-slate-950 hover:bg-cyan-400"
+            >
+              Abrir ficha
+            </Link>
           </article>
         ))}
       </section>
