@@ -418,7 +418,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
   const operationalZoneController = useOperationalZones({
     map,
     zones: DEMO_OPERATIONAL_ZONES,
-    enabled: expanded && zonesEnabled && mapStatus === "ready",
+    enabled: zonesEnabled && mapStatus === "ready",
     selectedZoneId,
     onSelectZone: selectZone,
   });
@@ -557,7 +557,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
         />
       )}
 
-      {expanded && !selectedEntity && (
+      {!selectedEntity && (
         <OperationalZonesPanel
           enabled={zonesEnabled}
           zones={DEMO_OPERATIONAL_ZONES}
