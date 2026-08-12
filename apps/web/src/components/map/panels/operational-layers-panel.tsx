@@ -16,6 +16,8 @@ type OperationalLayersPanelProps = {
   entities: OperationalEntity[];
   layers: OperationalLayerVisibility;
   visibleConnectionCount: number;
+  zonesEnabled: boolean;
+  zoneCount: number;
   dataStatus: DataStatus;
   generatedAt: string | null;
   onToggleLayer: (
@@ -23,6 +25,7 @@ type OperationalLayersPanelProps = {
   ) => void;
   onShowAll: () => void;
   onHideAll: () => void;
+  onToggleZones: () => void;
   onReturnToOverview: () => void;
   onReloadData: () => Promise<void>;
 };
@@ -86,18 +89,21 @@ export function OperationalLayersPanel({
   entities,
   layers,
   visibleConnectionCount,
+  zonesEnabled,
+  zoneCount,
   dataStatus,
   generatedAt,
   onToggleLayer,
   onShowAll,
   onHideAll,
+  onToggleZones,
   onReturnToOverview,
   onReloadData,
 }: OperationalLayersPanelProps) {
   const activeLayerCount =
     Object.values(layers).filter(
       Boolean,
-    ).length;
+    ).length + (zonesEnabled ? 1 : 0);
 
   const visibleEntityCount =
     entities.filter(
@@ -186,6 +192,36 @@ export function OperationalLayersPanel({
             );
           })}
         </div>
+
+        <button
+          type="button"
+          className={[
+            "mt-3 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition",
+            zonesEnabled
+              ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-100"
+              : "border-slate-800 bg-slate-950/70 text-slate-400 hover:border-cyan-400/40",
+          ].join(" ")}
+          onClick={onToggleZones}
+          aria-pressed={zonesEnabled}
+        >
+          <span className="flex items-center gap-2">
+            <span
+              className={[
+                "h-2.5 w-2.5 rounded-sm",
+                zonesEnabled ? "bg-cyan-300" : "bg-slate-600",
+              ].join(" ")}
+            />
+            Áreas de referência
+          </span>
+          <span className="flex items-center gap-2">
+            <span>{zoneCount}</span>
+            <span>{zonesEnabled ? "Ativa" : "Oculta"}</span>
+          </span>
+        </button>
+
+        <p className="mt-1 text-[9px] leading-3 text-amber-200/70">
+          Polígonos sintéticos para validação visual; não representam limites oficiais.
+        </p>
 
         <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3">
           <button
