@@ -540,11 +540,14 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
         entities={allEntities}
         layers={layers}
         visibleConnectionCount={visibleConnectionCount}
+        zonesEnabled={zonesEnabled}
+        zoneCount={DEMO_OPERATIONAL_ZONES.length}
         dataStatus={entitiesStatus}
         generatedAt={generatedAt}
         onToggleLayer={toggleLayer}
         onShowAll={showAllLayers}
         onHideAll={hideAllLayers}
+        onToggleZones={toggleZones}
         onReturnToOverview={returnToManaus}
         onReloadData={reloadEntities}
       />
