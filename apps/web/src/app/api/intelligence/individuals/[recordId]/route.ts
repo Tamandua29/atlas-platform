@@ -89,7 +89,6 @@ export async function GET(
       metadata: {
         actorId: authorization.session.actorId,
         actorRole: authorization.session.role,
-        recordId,
         addressCount: addresses.length,
         phoneCount: phones.length,
         vehicleCount: vehicles.length,
