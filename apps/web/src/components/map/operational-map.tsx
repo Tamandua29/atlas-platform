@@ -9,6 +9,7 @@ import { isCoordinateConsistentWithNeighborhood } from "@/features/operational-m
 import { DEMO_OPERATIONAL_ZONES } from "@/features/operational-map/operational-map.zones";
 import { useOperationalZones } from "@/features/operational-map/use-operational-zones";
 import { useOperationalConnections } from "@/features/operational-map/use-operational-connections";
+import { useOperationalHeatmap } from "@/features/operational-map/use-operational-heatmap";
 
 import type {
   OperationalEntity,
@@ -89,6 +90,8 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
   const [zonesEnabled, setZonesEnabled] = useState(false);
+
+  const [heatmapEnabled, setHeatmapEnabled] = useState(false);
 
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
@@ -438,6 +441,15 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     enabled: mapStatus === "ready" && entitiesStatus === "success",
   });
 
+  const { heatmapPointCount } = useOperationalHeatmap({
+    map,
+    entities: allEntities.filter((entity) => layers.occurrence),
+    enabled:
+      heatmapEnabled &&
+      mapStatus === "ready" &&
+      entitiesStatus === "success",
+  });
+
   function toggleLayer(type: OperationalEntityType) {
     const layerWillBeHidden = layers[type];
 
@@ -475,6 +487,10 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   function closeDetails() {
     setSelectedEntityId(null);
+  }
+
+  function toggleHeatmap() {
+    setHeatmapEnabled((current) => !current);
   }
 
   function toggleZones() {
@@ -540,6 +556,8 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
         entities={allEntities}
         layers={layers}
         visibleConnectionCount={visibleConnectionCount}
+        heatmapEnabled={heatmapEnabled}
+        heatmapPointCount={heatmapPointCount}
         zonesEnabled={zonesEnabled}
         zoneCount={DEMO_OPERATIONAL_ZONES.length}
         dataStatus={entitiesStatus}
@@ -547,6 +565,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
         onToggleLayer={toggleLayer}
         onShowAll={showAllLayers}
         onHideAll={hideAllLayers}
+        onToggleHeatmap={toggleHeatmap}
         onToggleZones={toggleZones}
         onReturnToOverview={returnToManaus}
         onReloadData={reloadEntities}
