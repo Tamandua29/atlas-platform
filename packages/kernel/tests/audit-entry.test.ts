@@ -26,6 +26,17 @@ describe("AuditEntry", () => {
     expect(audit.metadata?.organizationCount).toBe(1);
   });
 
+  it("aceita contagem operacional de arquivos vinculados", () => {
+    const audit = AuditEntry.create({
+      action: "intelligence.individuals.profile",
+      outcome: "success",
+      occurredAt: new Date(),
+      metadata: { linkedFileCount: 2 },
+    });
+
+    expect(audit.metadata?.linkedFileCount).toBe(2);
+  });
+
   it.each([
     "cpf",
     "maskedCpf",

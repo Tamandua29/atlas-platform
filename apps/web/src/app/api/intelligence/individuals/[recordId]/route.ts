@@ -97,7 +97,7 @@ export async function GET(
         occurrenceCount: occurrences.length,
         organizationCount: organizations.length,
         personalRelationshipCount: personalRelationships.length,
-        documentCount: documents.length,
+        linkedFileCount: documents.length,
         timelineEventCount: timeline.length,
         mode: "protected-individual-profile",
       },
