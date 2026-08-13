@@ -16,6 +16,8 @@ type OperationalLayersPanelProps = {
   entities: OperationalEntity[];
   layers: OperationalLayerVisibility;
   visibleConnectionCount: number;
+  heatmapEnabled: boolean;
+  heatmapPointCount: number;
   zonesEnabled: boolean;
   zoneCount: number;
   dataStatus: DataStatus;
@@ -25,6 +27,7 @@ type OperationalLayersPanelProps = {
   ) => void;
   onShowAll: () => void;
   onHideAll: () => void;
+  onToggleHeatmap: () => void;
   onToggleZones: () => void;
   onReturnToOverview: () => void;
   onReloadData: () => Promise<void>;
@@ -89,6 +92,8 @@ export function OperationalLayersPanel({
   entities,
   layers,
   visibleConnectionCount,
+  heatmapEnabled,
+  heatmapPointCount,
   zonesEnabled,
   zoneCount,
   dataStatus,
@@ -96,6 +101,7 @@ export function OperationalLayersPanel({
   onToggleLayer,
   onShowAll,
   onHideAll,
+  onToggleHeatmap,
   onToggleZones,
   onReturnToOverview,
   onReloadData,
@@ -103,7 +109,7 @@ export function OperationalLayersPanel({
   const activeLayerCount =
     Object.values(layers).filter(
       Boolean,
-    ).length + (zonesEnabled ? 1 : 0);
+    ).length + (zonesEnabled ? 1 : 0) + (heatmapEnabled ? 1 : 0);
 
   const visibleEntityCount =
     entities.filter(
@@ -192,6 +198,36 @@ export function OperationalLayersPanel({
             );
           })}
         </div>
+
+        <button
+          type="button"
+          className={[
+            "mt-3 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition",
+            heatmapEnabled
+              ? "border-orange-400/50 bg-orange-400/10 text-orange-100"
+              : "border-slate-800 bg-slate-950/70 text-slate-400 hover:border-orange-400/40",
+          ].join(" ")}
+          onClick={onToggleHeatmap}
+          aria-pressed={heatmapEnabled}
+        >
+          <span className="flex items-center gap-2">
+            <span
+              className={[
+                "h-2.5 w-2.5 rounded-full",
+                heatmapEnabled ? "bg-orange-400" : "bg-slate-600",
+              ].join(" ")}
+            />
+            Heatmap de ocorrências
+          </span>
+          <span className="flex items-center gap-2">
+            <span>{heatmapPointCount}</span>
+            <span>{heatmapEnabled ? "Ativo" : "Oculto"}</span>
+          </span>
+        </button>
+
+        <p className="mt-1 text-[9px] leading-3 text-slate-500">
+          Densidade calculada somente com ocorrências georreferenciadas carregadas.
+        </p>
 
         <button
           type="button"
