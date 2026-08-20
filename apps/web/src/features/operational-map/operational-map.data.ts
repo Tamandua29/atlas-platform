@@ -36,6 +36,12 @@ export const OPERATIONAL_ENTITY_CONFIG: Record<
     color: "#14b8a6",
   },
 
+  "point-of-sale": {
+    label: "Pontos de venda",
+    singularLabel: "Ponto de venda",
+    color: "#e11d48",
+  },
+
   alert: {
     label: "Alertas",
     singularLabel: "Alerta",
