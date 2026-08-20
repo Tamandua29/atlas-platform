@@ -606,6 +606,53 @@ function buildCreatedAt(
   return new Date(0).toISOString();
 }
 
+
+function isExplicitPointOfSaleOccurrence(
+  occurrence: AirtableOccurrenceFields,
+): boolean {
+  const searchableText = [
+    occurrence.Natureza,
+    occurrence.Categoria,
+    occurrence.Descrição,
+    occurrence["Resultado Operacional"],
+  ]
+    .map((value) => normalizeText(value).toLocaleLowerCase("pt-BR"))
+    .join(" ");
+
+  return [
+    "ponto de venda",
+    "ponto de comercialização",
+    "ponto de comercializacao",
+    "boca de fumo",
+    "local de venda de drogas",
+    "local de comercialização de drogas",
+    "local de comercializacao de drogas",
+  ].some((term) => searchableText.includes(term));
+}
+
+function mapPointOfSaleToEntity(
+  occurrenceRecord: AirtableRecord<AirtableOccurrenceFields>,
+  occurrenceEntity: OperationalEntity,
+): OperationalEntity | null {
+  if (!isExplicitPointOfSaleOccurrence(occurrenceRecord.fields)) {
+    return null;
+  }
+
+  return {
+    ...occurrenceEntity,
+    id: `point-of-sale:${occurrenceRecord.id}`,
+    type: "point-of-sale",
+    title: "Local associado a ponto de venda",
+    description:
+      "A fonte contém referência explícita a ponto de venda. A classificação exige validação humana e não confirma autoria ou participação criminal.",
+    status: "Referência explícita — validação humana",
+    relationshipKeys: [
+      ...(occurrenceEntity.relationshipKeys ?? []),
+      relationshipKey("occurrence", occurrenceRecord.id),
+    ],
+  };
+}
+
 function mapOccurrenceToEntity(
   occurrenceRecord: AirtableRecord<AirtableOccurrenceFields>,
   addressRecord: AirtableRecord<AirtableAddressFields>,
@@ -759,6 +806,15 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
       }
 
       entities.push(entity);
+
+      const pointOfSaleEntity = mapPointOfSaleToEntity(
+        occurrenceRecord,
+        entity,
+      );
+
+      if (pointOfSaleEntity) {
+        entities.push(pointOfSaleEntity);
+      }
 
       // Nesta fase, cada ocorrência será
       // representada pelo primeiro endereço
