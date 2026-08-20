@@ -67,6 +67,7 @@ const INITIAL_LAYER_VISIBILITY: OperationalLayerVisibility = {
   person: true,
   vehicle: true,
   organization: true,
+  "point-of-sale": true,
   alert: true,
 };
 
@@ -469,6 +470,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       person: true,
       vehicle: true,
       organization: true,
+      "point-of-sale": true,
       alert: true,
     });
   }
@@ -479,6 +481,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       person: false,
       vehicle: false,
       organization: false,
+      "point-of-sale": false,
       alert: false,
     });
 
