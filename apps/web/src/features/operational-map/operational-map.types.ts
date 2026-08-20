@@ -1,5 +1,10 @@
 export type OperationalEntityType =
-  "occurrence" | "person" | "vehicle" | "organization" | "alert";
+  | "occurrence"
+  | "person"
+  | "vehicle"
+  | "organization"
+  | "point-of-sale"
+  | "alert";
 
 export type OperationalPriority = "normal" | "medium" | "high";
 
