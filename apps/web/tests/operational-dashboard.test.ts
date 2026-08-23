@@ -30,9 +30,38 @@ describe("buildOperationalDashboard", () => {
       highPriority: 1,
       activeOccurrences: 1,
       linkedEntities: 1,
+      attentionRecords: 1,
+      georeferencedRecords: 3,
+      geographicCoverage: 100,
+      readinessScore: 77,
     });
-    expect(summary.byType).toMatchObject({ occurrence: 1, person: 1, vehicle: 1 });
-    expect(summary.byStatus).toEqual({ active: 2, completed: 1, attention: 0, other: 0 });
+    expect(summary.byType).toMatchObject({
+      occurrence: 1,
+      person: 1,
+      vehicle: 1,
+    });
+    expect(summary.byStatus).toEqual({
+      active: 2,
+      completed: 1,
+      attention: 0,
+      other: 0,
+    });
+    expect(summary.byPriority).toEqual({ normal: 2, medium: 0, high: 1 });
+    expect(summary.commandInsights).toContain(
+      "1 registro exige priorização operacional.",
+    );
+  });
+
+  it("gera recomendações agregadas sem expor conteúdo sensível", () => {
+    const summary = buildOperationalDashboard([
+      entity({ coordinates: [Number.NaN, Number.NaN], priority: "high" }),
+    ]);
+
+    expect(summary.metrics.geographicCoverage).toBe(0);
+    expect(summary.commandInsights.join(" ")).toContain(
+      "revisar registros sem coordenadas",
+    );
+    expect(JSON.stringify(summary.commandInsights)).not.toContain("protegido");
   });
 
   it("não envia identificadores, textos, localização ou coordenadas na atividade", () => {
