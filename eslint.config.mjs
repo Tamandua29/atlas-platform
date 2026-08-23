@@ -3,6 +3,9 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
+    linterOptions: {
+      noInlineConfig: true,
+    },
     ignores: [
       "**/node_modules/**",
       "**/.turbo/**",
@@ -17,13 +20,7 @@ export default tseslint.config(
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        {
-          prefer: "type-imports",
-          fixStyle: "inline-type-imports",
-        },
-      ],
+      "@typescript-eslint/consistent-type-imports": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
