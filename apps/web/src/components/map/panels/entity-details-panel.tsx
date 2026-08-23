@@ -10,6 +10,8 @@ import type { OperationalEntity } from "@/features/operational-map/operational-m
 
 type EntityDetailsPanelProps = {
   entity: OperationalEntity;
+  explicitConnectionCount: number;
+  connectionsEnabled: boolean;
   onClose: () => void;
   onCenter: () => void;
 };
@@ -29,6 +31,8 @@ function formatEntityDate(createdAt: string) {
 
 export function EntityDetailsPanel({
   entity,
+  explicitConnectionCount,
+  connectionsEnabled,
   onClose,
   onCenter,
 }: EntityDetailsPanelProps) {
@@ -146,6 +150,23 @@ export function EntityDetailsPanel({
             <dd className="mt-2 text-sm font-medium text-white">
               {formattedDate}
             </dd>
+          </div>
+
+          <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-300">
+              Vínculos explícitos visíveis
+            </dt>
+
+            <dd className="mt-2 text-sm font-semibold text-white">
+              {connectionsEnabled
+                ? `${explicitConnectionCount} conexão(ões)`
+                : "Camada de vínculos desativada"}
+            </dd>
+
+            <p className="mt-2 text-[11px] leading-5 text-slate-400">
+              Contagem restrita aos registros visíveis ligados explicitamente
+              na fonte. Proximidade geográfica não cria vínculo.
+            </p>
           </div>
         </dl>
       </div>
