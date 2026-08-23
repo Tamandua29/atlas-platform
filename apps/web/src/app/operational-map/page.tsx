@@ -1,8 +1,24 @@
 import Link from "next/link";
 
 import { OperationalMap } from "@/components/map/operational-map";
+import { parseOperationalMapUrlState } from "@/features/operational-map/operational-map.url-state";
 
-export default function OperationalMapPage() {
+type OperationalMapPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function OperationalMapPage({
+  searchParams,
+}: OperationalMapPageProps) {
+  const incomingParams = await searchParams;
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(incomingParams)) {
+    if (Array.isArray(value)) value.forEach((item) => params.append(key, item));
+    else if (value !== undefined) params.set(key, value);
+  }
+
+  const initialUrlState = parseOperationalMapUrlState(params);
   return (
     <main className="min-h-screen bg-[#050814] text-slate-100">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 bg-[#080d1b] px-6 py-5 lg:px-10">
@@ -38,7 +54,7 @@ export default function OperationalMapPage() {
 
       <section className="p-4 lg:p-6">
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-[#0a1020]">
-          <OperationalMap expanded />
+          <OperationalMap expanded initialUrlState={initialUrlState} />
         </div>
       </section>
     </main>

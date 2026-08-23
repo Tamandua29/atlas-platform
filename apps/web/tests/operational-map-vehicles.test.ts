@@ -86,8 +86,9 @@ describe("operational map vehicle repository", () => {
 
     const entities = await loadOperationalEntitiesFromAirtable();
 
-    expect(entities).toEqual([
-      expect.objectContaining({
+    expect(entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
         id: "vehicle:vehicle-1:address-1",
         type: "vehicle",
         title: "Toyota Corolla",
@@ -97,8 +98,9 @@ describe("operational map vehicle repository", () => {
         status: "Apreendido",
         reference: "vehicle-1",
         locationLabel: "Rua Teste, 100 — Japiim — Manaus",
-      }),
-    ]);
+        }),
+      ]),
+    );
     expect(JSON.stringify(entities)).not.toContain("12345678901");
     expect(JSON.stringify(entities)).not.toContain("ABC1D23");
   });
@@ -125,8 +127,12 @@ describe("operational map vehicle repository", () => {
 
     const entities = await loadOperationalEntitiesFromAirtable();
 
-    expect(entities).toHaveLength(1);
-    expect(entities[0]).toMatchObject({
+    const vehicleEntities = entities.filter(
+      (entity) => entity.type === "vehicle",
+    );
+
+    expect(vehicleEntities).toHaveLength(1);
+    expect(vehicleEntities[0]).toMatchObject({
       id: "vehicle:vehicle-1:address-1",
       description: "XYZ•••7",
     });

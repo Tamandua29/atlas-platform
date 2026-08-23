@@ -1,21 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { buildOperationalConnections } from "../src/features/operational-map/operational-map.connections";
+
 import type { OperationalEntity } from "../src/features/operational-map/operational-map.types";
 
 function entity(
   id: string,
   coordinates: [number, number],
-  relationshipKeys: string[],
+  relationshipKeys: string[] = [],
 ): OperationalEntity {
   return {
     id,
     type: "person",
     title: id,
-    description: "Teste",
+    description: "",
     coordinates,
-    createdAt: "2026-08-11T00:00:00.000Z",
-    priority: "normal",
+    createdAt: "2026-08-09T00:00:00.000Z",
     status: "Ativo",
     reference: id,
     locationLabel: "Manaus",
@@ -24,54 +24,77 @@ function entity(
 }
 
 describe("buildOperationalConnections", () => {
-  it("liga somente entidades com vínculo explícito e coordenadas distintas", () => {
+  it("liga registros com vínculo explícito e coordenadas distintas", () => {
     const result = buildOperationalConnections(
       [
-        entity("person-1", [-60.01, -3.1], ["relation-a"]),
-        entity("vehicle-1", [-60.02, -3.11], ["relation-a"]),
-        entity("unrelated", [-60.03, -3.12], ["relation-b"]),
-        entity("same-point", [-60.01, -3.1], ["relation-a"]),
+        entity("pessoa", [-60, -3.1], ["caso:1"]),
+        entity("ocorrencia", [-59.9, -3.2], ["caso:1"]),
       ],
       null,
     );
 
-    expect(result.features).toHaveLength(2);
-    expect(result.features.map((feature) => feature.properties)).toEqual([
-      {
-        fromEntityId: "person-1",
-        toEntityId: "vehicle-1",
+    expect(result.features).toHaveLength(1);
+    expect(result.features[0]).toMatchObject({
+      properties: {
+        fromEntityId: "pessoa",
+        toEntityId: "ocorrencia",
         selected: false,
       },
-      {
-        fromEntityId: "vehicle-1",
-        toEntityId: "same-point",
-        selected: false,
+      geometry: {
+        coordinates: [
+          [-60, -3.1],
+          [-59.9, -3.2],
+        ],
       },
-    ]);
+    });
   });
 
-  it("destaca as conexões da entidade selecionada", () => {
+  it("não infere ligação sem chave compartilhada", () => {
     const result = buildOperationalConnections(
       [
-        entity("person-1", [-60.01, -3.1], ["relation-a"]),
-        entity("vehicle-1", [-60.02, -3.11], ["relation-a"]),
-      ],
-      "person-1",
-    );
-
-    expect(result.features[0].properties.selected).toBe(true);
-  });
-
-  it("não cria linha sem vínculo explícito ou entre registros no mesmo ponto", () => {
-    const result = buildOperationalConnections(
-      [
-        entity("person-1", [-60.01, -3.1], ["relation-a"]),
-        entity("same-point", [-60.01, -3.1], ["relation-a"]),
-        entity("unrelated", [-60.02, -3.11], ["relation-b"]),
+        entity("a", [-60, -3.1], ["caso:1"]),
+        entity("b", [-59.9, -3.2], ["caso:2"]),
       ],
       null,
     );
 
     expect(result.features).toHaveLength(0);
+  });
+
+  it("não desenha linha entre registros na mesma coordenada", () => {
+    const result = buildOperationalConnections(
+      [
+        entity("a", [-60, -3.1], ["caso:1"]),
+        entity("b", [-60, -3.1], ["caso:1"]),
+      ],
+      null,
+    );
+
+    expect(result.features).toHaveLength(0);
+  });
+
+  it("destaca as ligações da entidade selecionada", () => {
+    const result = buildOperationalConnections(
+      [
+        entity("a", [-60, -3.1], ["caso:1"]),
+        entity("b", [-59.9, -3.2], ["caso:1"]),
+      ],
+      "b",
+    );
+
+    expect(result.features[0]?.properties.selected).toBe(true);
+  });
+
+  it("gera uma única ligação para cada par relacionado", () => {
+    const result = buildOperationalConnections(
+      [
+        entity("a", [-60, -3.1], ["grupo:1"]),
+        entity("b", [-59.9, -3.2], ["grupo:1"]),
+        entity("c", [-59.8, -3.3], ["grupo:1"]),
+      ],
+      null,
+    );
+
+    expect(result.features).toHaveLength(3);
   });
 });

@@ -2,6 +2,7 @@ export type OperationalEntityType =
   | "occurrence"
   | "person"
   | "vehicle"
+  | "address"
   | "organization"
   | "point-of-sale"
   | "alert";

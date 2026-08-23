@@ -1,10 +1,12 @@
 import { OPERATIONAL_ZONE_CONFIG } from "@/features/operational-map/operational-map.zones";
 
 import type { OperationalZone } from "@/features/operational-map/operational-map.types";
+import type { OperationalZoneSource } from "@/features/operational-map/operational-zones.client";
 
 type OperationalZonesPanelProps = {
   enabled: boolean;
   zones: OperationalZone[];
+  source: OperationalZoneSource;
   selectedZone: OperationalZone | null;
   onToggle: () => void;
   onSelect: (zone: OperationalZone) => void;
@@ -16,6 +18,7 @@ type OperationalZonesPanelProps = {
 export function OperationalZonesPanel({
   enabled,
   zones,
+  source,
   selectedZone,
   onToggle,
   onSelect,
@@ -31,7 +34,7 @@ export function OperationalZonesPanel({
             Áreas de referência
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            {enabled ? "Camada demonstrativa visível" : "Camada demonstrativa oculta"}
+            {enabled ? "Camada visível" : "Camada oculta"} · {source === "airtable" ? "Fonte persistida" : "Fallback sintético"}
           </p>
         </div>
 
@@ -123,8 +126,9 @@ export function OperationalZonesPanel({
       )}
 
       <p className="border-t border-amber-400/20 bg-amber-400/5 px-5 py-3 text-xs leading-5 text-amber-200">
-        Referência visual sintética. Não representa limite institucional, domínio
-        territorial ou classificação criminal.
+        {source === "airtable"
+          ? "Geometrias explicitamente cadastradas na fonte. A exibição não infere domínio territorial nem classificação criminal."
+          : "Referência visual sintética. Não representa limite institucional, domínio territorial ou classificação criminal."}
       </p>
     </aside>
   );

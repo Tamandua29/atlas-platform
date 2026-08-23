@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { RasterMapPreview } from "@/components/map/raster-map-preview";
 
 type Photo = {
   evidenceRecordId: string;
@@ -449,9 +450,6 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
               const mapUrl = hasCoordinates
                 ? openStreetMapUrl(latitude, longitude)
                 : null;
-              const mapEmbedUrl = hasCoordinates
-                ? openStreetMapEmbedUrl(latitude, longitude)
-                : null;
 
               return (
                 <article
@@ -480,15 +478,13 @@ export function IndividualProfileClient({ recordId }: { recordId: string }) {
                       </span>
                     ) : null}
                   </div>
-                  {mapUrl && mapEmbedUrl ? (
+                  {mapUrl && hasCoordinates ? (
                     <div className="mt-5 space-y-3">
                       <div className="overflow-hidden rounded-xl border border-cyan-400/20 bg-slate-900">
-                        <iframe
-                          title={`Mapa de ${address.label}`}
-                          src={mapEmbedUrl}
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          className="h-64 w-full"
+                        <RasterMapPreview
+                          latitude={latitude}
+                          longitude={longitude}
+                          label={address.label}
                         />
                       </div>
                       <div className="flex flex-wrap gap-3">
@@ -1150,18 +1146,6 @@ function formatDateTime(value: string) {
 
 function openStreetMapUrl(latitude: number, longitude: number) {
   return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`;
-}
-
-function openStreetMapEmbedUrl(latitude: number, longitude: number) {
-  const offset = 0.006;
-  const boundingBox = [
-    longitude - offset,
-    latitude - offset,
-    longitude + offset,
-    latitude + offset,
-  ].join(",");
-
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(boundingBox)}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
 }
 
 function DocumentInfo({

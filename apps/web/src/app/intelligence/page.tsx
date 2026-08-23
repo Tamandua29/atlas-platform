@@ -1,6 +1,15 @@
 import Link from "next/link";
 
+import { IntelligenceOverviewClient } from "./intelligence-overview-client";
+
 const modules = [
+  {
+    href: "/intelligence/search",
+    eyebrow: "Consulta transversal",
+    title: "Pesquisa unificada",
+    description: "Localize pessoas, organizações, veículos e mandados em uma única consulta protegida.",
+    accent: "border-emerald-400/30 text-emerald-300",
+  },
   {
     href: "/intelligence/individuals",
     eyebrow: "Identificação canônica",
@@ -64,6 +73,8 @@ export default function IntelligencePage() {
             autenticadas e auditadas, com identificadores sensíveis protegidos.
           </p>
         </section>
+
+        <IntelligenceOverviewClient />
 
         <section className="grid gap-5 md:grid-cols-2" aria-label="Módulos do Banco de Inteligência">
           {modules.map((module) => (

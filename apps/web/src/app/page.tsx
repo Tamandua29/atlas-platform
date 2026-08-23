@@ -1,60 +1,19 @@
 import Link from "next/link";
 
 import { OperationalMap } from "@/components/map/operational-map";
+import {
+  OperationalDashboardActivity,
+  OperationalDashboardDistributions,
+  OperationalDashboardMetrics,
+} from "@/app/operational-dashboard-client";
 
 const navigation = [
-  { label: "Visão geral", symbol: "◫", active: true },
-  { label: "Inteligência", symbol: "◎" },
-  { label: "Pessoas", symbol: "♙" },
-  { label: "Veículos", symbol: "◇" },
-  { label: "Ocorrências", symbol: "△" },
-  { label: "Mapa operacional", symbol: "⌖" },
-  { label: "Análises", symbol: "▥" },
-  { label: "Relatórios", symbol: "▤" },
-];
-
-const indicators = [
-  {
-    label: "Registros analisados",
-    value: "1.284",
-    detail: "+12,4% no período",
-  },
-  {
-    label: "Alertas ativos",
-    value: "18",
-    detail: "5 de alta prioridade",
-  },
-  {
-    label: "Entidades monitoradas",
-    value: "342",
-    detail: "Pessoas, veículos e locais",
-  },
-  {
-    label: "Vínculos identificados",
-    value: "897",
-    detail: "+43 nas últimas 24h",
-  },
-];
-
-const activities = [
-  {
-    title: "Novo vínculo identificado",
-    description: "Correlação entre pessoa, veículo e ocorrência.",
-    time: "Há 8 minutos",
-    priority: "Alta",
-  },
-  {
-    title: "Registro georreferenciado",
-    description: "Nova localização incorporada ao mapa operacional.",
-    time: "Há 23 minutos",
-    priority: "Média",
-  },
-  {
-    title: "Documento processado",
-    description: "Extração e estruturação de informações concluídas.",
-    time: "Há 41 minutos",
-    priority: "Normal",
-  },
+  { label: "Visão geral", symbol: "◫", href: "/", active: true },
+  { label: "Inteligência", symbol: "◎", href: "/identification-dashboard" },
+  { label: "Pessoas", symbol: "♙", href: "/intelligence/individuals" },
+  { label: "Mapa operacional", symbol: "⌖", href: "/operational-map" },
+  { label: "Qualidade dos dados", symbol: "▥", href: "/data-quality" },
+  { label: "Fila de revisão", symbol: "▤", href: "/review-queue" },
 ];
 
 export default function Home() {
@@ -82,15 +41,15 @@ export default function Home() {
             </p>
 
             {navigation.map((item) => (
-              <button
+              <Link
                 key={item.label}
+                href={item.href}
                 className={[
                   "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition",
                   item.active
                     ? "bg-cyan-400/10 text-cyan-300"
                     : "text-slate-400 hover:bg-slate-800/60 hover:text-white",
                 ].join(" ")}
-                type="button"
               >
                 <span
                   className={[
@@ -104,7 +63,7 @@ export default function Home() {
                 </span>
 
                 <span className="font-medium">{item.label}</span>
-              </button>
+              </Link>
             ))}
           </nav>
 
@@ -139,12 +98,12 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
+              <Link
                 className="hidden h-10 min-w-72 items-center rounded-xl border border-slate-800 bg-slate-900/70 px-4 text-left text-sm text-slate-500 transition hover:border-slate-700 md:flex"
-                type="button"
+                href="/intelligence/individuals"
               >
                 Pesquisar pessoas, veículos ou ocorrências...
-              </button>
+              </Link>
 
               <button
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-400 transition hover:text-white"
@@ -194,34 +153,36 @@ export default function Home() {
                     Painel de identificação
                   </Link>
 
-                  <button
+                  <Link
+                    href="/data-quality"
                     className="rounded-xl border border-slate-700 bg-slate-900/70 px-5 py-3 text-sm font-semibold text-white transition hover:border-slate-600"
-                    type="button"
                   >
-                    Importar dados
-                  </button>
+                    Qualidade dos dados
+                  </Link>
                 </div>
               </div>
             </section>
 
             <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {indicators.map((indicator) => (
-                <article
-                  key={indicator.label}
-                  className="rounded-2xl border border-slate-800 bg-[#0a1020] p-5 transition hover:border-slate-700"
-                >
-                  <p className="text-sm text-slate-500">{indicator.label}</p>
-
-                  <p className="mt-3 text-3xl font-semibold text-white">
-                    {indicator.value}
-                  </p>
-
-                  <p className="mt-3 text-xs text-cyan-300">
-                    {indicator.detail}
-                  </p>
-                </article>
-              ))}
+              <OperationalDashboardMetrics />
             </section>
+
+            <section className="mt-6 grid gap-6 xl:grid-cols-2">
+              <OperationalDashboardDistributions />
+            </section>
+
+            <nav aria-label="Atalhos operacionais" className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                ["Mapa expandido", "/operational-map"],
+                ["Diretório de indivíduos", "/intelligence/individuals"],
+                ["Fila de identificação", "/review-queue"],
+                ["Fila de saneamento", "/data-quality/queue"],
+              ].map(([label, href]) => (
+                <Link key={href} href={href} className="rounded-xl border border-slate-800 bg-[#0a1020] px-4 py-3 text-sm font-medium text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-300">
+                  {label}
+                </Link>
+              ))}
+            </nav>
 
             <section className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
               <article className="min-h-[430px] overflow-hidden rounded-2xl border border-slate-800 bg-[#0a1020]">
@@ -258,40 +219,8 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="divide-y divide-slate-800">
-                  {activities.map((activity) => (
-                    <div key={activity.title} className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h4 className="text-sm font-semibold text-white">
-                            {activity.title}
-                          </h4>
+                <OperationalDashboardActivity />
 
-                          <p className="mt-2 text-xs leading-5 text-slate-500">
-                            {activity.description}
-                          </p>
-                        </div>
-
-                        <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[10px] font-semibold text-cyan-300">
-                          {activity.priority}
-                        </span>
-                      </div>
-
-                      <p className="mt-3 text-[11px] text-slate-600">
-                        {activity.time}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-4">
-                  <button
-                    className="w-full rounded-xl border border-slate-700 py-3 text-sm font-medium text-slate-300 transition hover:border-slate-600 hover:text-white"
-                    type="button"
-                  >
-                    Ver toda a atividade
-                  </button>
-                </div>
               </article>
             </section>
           </div>

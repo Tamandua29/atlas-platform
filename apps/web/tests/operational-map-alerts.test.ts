@@ -71,8 +71,9 @@ describe("operational map alert repository", () => {
 
     const entities = await loadOperationalEntitiesFromAirtable();
 
-    expect(entities).toEqual([
-      expect.objectContaining({
+    expect(entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
         id: "alert:warrant-1:address-1",
         type: "alert",
         title: "Mandado de prisão",
@@ -80,12 +81,14 @@ describe("operational map alert repository", () => {
         priority: "medium",
         status: "Vigente",
         reference: "warrant-1",
-      }),
-    ]);
+        }),
+      ]),
+    );
     expect(JSON.stringify(entities)).not.toContain("MANDADO-123456789");
     expect(JSON.stringify(entities)).not.toContain("PROCESSO-987654321");
-    expect(entities[0]?.description).toContain("6789");
-    expect(entities[0]?.description).toContain("4321");
+    const alert = entities.find((entity) => entity.type === "alert");
+    expect(alert?.description).toContain("6789");
+    expect(alert?.description).toContain("4321");
   });
 
   it("não publica mandado encerrado ou vencido como alerta", async () => {
@@ -107,6 +110,8 @@ describe("operational map alert repository", () => {
       ],
     );
 
-    await expect(loadOperationalEntitiesFromAirtable()).resolves.toEqual([]);
+    const entities = await loadOperationalEntitiesFromAirtable();
+
+    expect(entities.filter((entity) => entity.type === "alert")).toEqual([]);
   });
 });

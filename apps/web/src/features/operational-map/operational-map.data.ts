@@ -30,6 +30,12 @@ export const OPERATIONAL_ENTITY_CONFIG: Record<
     color: "#a78bfa",
   },
 
+  address: {
+    label: "Endereços",
+    singularLabel: "Endereço",
+    color: "#facc15",
+  },
+
   organization: {
     label: "Organizações",
     singularLabel: "Organização",

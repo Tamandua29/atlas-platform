@@ -530,6 +530,49 @@ function buildAddressLabel(address: AirtableAddressFields): string {
     .join(" — ");
 }
 
+function mapAddressToEntity(
+  addressRecord: AirtableRecord<AirtableAddressFields>,
+): OperationalEntity | null {
+  const fields = addressRecord.fields;
+  const coordinates = getValidCoordinates(fields.Latitude, fields.Longitude);
+
+  if (
+    !coordinates ||
+    !isCoordinateConsistentWithNeighborhood({
+      neighborhood: fields.Bairro,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    })
+  ) {
+    return null;
+  }
+
+  const locationLabel =
+    buildAddressLabel(fields) || "Endereço georreferenciado";
+  const context = [
+    normalizeText(fields.Bairro),
+    normalizeText(fields.Município),
+    normalizeText(fields.Estado),
+  ]
+    .filter(Boolean)
+    .join(" — ");
+  const verificationStatus = normalizeText(fields["Situação da Verificação"]);
+
+  return {
+    id: `address:${addressRecord.id}`,
+    type: "address",
+    title: locationLabel,
+    description: context || "Localização validada na base operacional.",
+    coordinates,
+    createdAt: addressRecord.createdTime,
+    priority: "normal",
+    status: verificationStatus || "Georreferenciado",
+    reference: normalizeText(fields["ID Endereço"]) || addressRecord.id,
+    locationLabel,
+    relationshipKeys: [relationshipKey("address", addressRecord.id)],
+  };
+}
+
 function buildOccurrenceDescription(
   occurrence: AirtableOccurrenceFields,
 ): string {
@@ -562,6 +605,23 @@ function buildOccurrenceTitle(occurrence: AirtableOccurrenceFields): string {
   }
 
   return "Ocorrência operacional";
+}
+
+function isExplicitPointOfSale(
+  occurrence: AirtableOccurrenceFields,
+): boolean {
+  const explicitClassification = [occurrence.Natureza, occurrence.Categoria]
+    .map((value) =>
+      normalizeText(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("pt-BR"),
+    )
+    .join(" ");
+
+  return /\b(ponto de venda|boca de fumo|local de comercializacao de drogas)\b/.test(
+    explicitClassification,
+  );
 }
 
 function buildOccurrenceReference(
@@ -606,53 +666,6 @@ function buildCreatedAt(
   return new Date(0).toISOString();
 }
 
-
-function isExplicitPointOfSaleOccurrence(
-  occurrence: AirtableOccurrenceFields,
-): boolean {
-  const searchableText = [
-    occurrence.Natureza,
-    occurrence.Categoria,
-    occurrence.Descrição,
-    occurrence["Resultado Operacional"],
-  ]
-    .map((value) => normalizeText(value).toLocaleLowerCase("pt-BR"))
-    .join(" ");
-
-  return [
-    "ponto de venda",
-    "ponto de comercialização",
-    "ponto de comercializacao",
-    "boca de fumo",
-    "local de venda de drogas",
-    "local de comercialização de drogas",
-    "local de comercializacao de drogas",
-  ].some((term) => searchableText.includes(term));
-}
-
-function mapPointOfSaleToEntity(
-  occurrenceRecord: AirtableRecord<AirtableOccurrenceFields>,
-  occurrenceEntity: OperationalEntity,
-): OperationalEntity | null {
-  if (!isExplicitPointOfSaleOccurrence(occurrenceRecord.fields)) {
-    return null;
-  }
-
-  return {
-    ...occurrenceEntity,
-    id: `point-of-sale:${occurrenceRecord.id}`,
-    type: "point-of-sale",
-    title: "Local associado a ponto de venda",
-    description:
-      "A fonte contém referência explícita a ponto de venda. A classificação exige validação humana e não confirma autoria ou participação criminal.",
-    status: "Referência explícita — validação humana",
-    relationshipKeys: [
-      ...(occurrenceEntity.relationshipKeys ?? []),
-      relationshipKey("occurrence", occurrenceRecord.id),
-    ],
-  };
-}
-
 function mapOccurrenceToEntity(
   occurrenceRecord: AirtableRecord<AirtableOccurrenceFields>,
   addressRecord: AirtableRecord<AirtableAddressFields>,
@@ -680,12 +693,15 @@ function mapOccurrenceToEntity(
   const addressLabel = buildAddressLabel(address);
 
   const status = normalizeText(occurrence.Situação) || "Sem classificação";
+  const isPointOfSale = isExplicitPointOfSale(occurrence);
 
   return {
     id: occurrenceRecord.id,
-    type: "occurrence",
-    title: buildOccurrenceTitle(occurrence),
-    description: buildOccurrenceDescription(occurrence),
+    type: isPointOfSale ? "point-of-sale" : "occurrence",
+    title: isPointOfSale ? "Ponto de venda sinalizado" : buildOccurrenceTitle(occurrence),
+    description: isPointOfSale
+      ? "Classificação explícita na fonte; requer validação humana."
+      : buildOccurrenceDescription(occurrence),
     reference: buildOccurrenceReference(occurrence, occurrenceRecord.id),
     locationLabel: addressLabel || "Localização não informada",
     coordinates,
@@ -789,6 +805,14 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
 
   const entities: OperationalEntity[] = [];
 
+  for (const addressRecord of addressRecords) {
+    const entity = mapAddressToEntity(addressRecord);
+
+    if (entity) {
+      entities.push(entity);
+    }
+  }
+
   for (const occurrenceRecord of occurrenceRecords) {
     const linkedAddressIds = occurrenceRecord.fields.Endereços ?? [];
 
@@ -806,15 +830,6 @@ export async function loadOperationalEntitiesFromAirtable(): Promise<
       }
 
       entities.push(entity);
-
-      const pointOfSaleEntity = mapPointOfSaleToEntity(
-        occurrenceRecord,
-        entity,
-      );
-
-      if (pointOfSaleEntity) {
-        entities.push(pointOfSaleEntity);
-      }
 
       // Nesta fase, cada ocorrência será
       // representada pelo primeiro endereço

@@ -6,13 +6,29 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { MANAUS_CENTER } from "@/features/operational-map/operational-map.data";
 import { isCoordinateConsistentWithNeighborhood } from "@/features/operational-map/geographic-consistency";
-import { DEMO_OPERATIONAL_ZONES } from "@/features/operational-map/operational-map.zones";
 import { useOperationalZones } from "@/features/operational-map/use-operational-zones";
+import { useOperationalZoneData } from "@/features/operational-map/use-operational-zone-data";
 import { useOperationalConnections } from "@/features/operational-map/use-operational-connections";
 import { useOperationalHeatmap } from "@/features/operational-map/use-operational-heatmap";
+import { useOperationalPolygonDraft } from "@/features/operational-map/use-operational-polygon-draft";
+import { replaceOperationalPolygonVertex } from "@/features/operational-map/operational-map.drawing";
+import {
+  DEFAULT_OPERATIONAL_MAP_FILTERS,
+  filterOperationalEntities,
+  getOperationalStatusOptions,
+  hasActiveOperationalMapFilters,
+} from "@/features/operational-map/operational-map.search";
+import {
+  buildOperationalMapSearchParams,
+  DEFAULT_OPERATIONAL_MAP_URL_STATE,
+  type OperationalMapUrlState,
+} from "@/features/operational-map/operational-map.url-state";
+
+import type { OperationalMapFilters } from "@/features/operational-map/operational-map.search";
 
 import type {
   OperationalEntity,
+  OperationalCoordinates,
   OperationalEntityType,
   OperationalLayerVisibility,
   OperationalZone,
@@ -23,6 +39,7 @@ import { useOperationalMarkers } from "./hooks/use-operational-markers";
 import { MapStatusOverlays } from "./overlays/map-status-overlays";
 import { EntityDetailsPanel } from "./panels/entity-details-panel";
 import { OperationalLayersPanel } from "./panels/operational-layers-panel";
+import { OperationalPolygonDraftPanel } from "./panels/operational-polygon-draft-panel";
 import { OperationalZonesPanel } from "./panels/operational-zones-panel";
 import { OperationalEntitiesProvider } from "./providers/operational-entities-provider";
 
@@ -62,20 +79,36 @@ function hasValidCoordinates(
   );
 }
 
-const INITIAL_LAYER_VISIBILITY: OperationalLayerVisibility = {
-  occurrence: true,
-  person: true,
-  vehicle: true,
-  organization: true,
-  "point-of-sale": true,
-  alert: true,
-};
-
 type OperationalMapProps = {
   expanded?: boolean;
+  initialUrlState?: OperationalMapUrlState;
 };
 
-function OperationalMapContent({ expanded = false }: OperationalMapProps) {
+type ShareStatus = "idle" | "copied" | "error";
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+
+  if (!copied) throw new Error("Não foi possível copiar o link.");
+}
+
+function OperationalMapContent({
+  expanded = false,
+  initialUrlState = DEFAULT_OPERATIONAL_MAP_URL_STATE,
+}: OperationalMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const [map, setMap] = useState<import("maplibre-gl").Map | null>(null);
@@ -84,21 +117,92 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   const [mapErrorMessage, setMapErrorMessage] = useState("");
 
-  const [layers, setLayers] = useState<OperationalLayerVisibility>(
-    INITIAL_LAYER_VISIBILITY,
-  );
+  const [layers, setLayers] = useState<OperationalLayerVisibility>(() => ({
+    ...initialUrlState.layers,
+  }));
 
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
-  const [zonesEnabled, setZonesEnabled] = useState(false);
+  const [zonesEnabled, setZonesEnabled] = useState(
+    initialUrlState.zonesEnabled,
+  );
 
-  const [heatmapEnabled, setHeatmapEnabled] = useState(false);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(
+    initialUrlState.heatmapEnabled,
+  );
+
+  const [connectionsEnabled, setConnectionsEnabled] = useState(
+    initialUrlState.connectionsEnabled,
+  );
 
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+
+  const [drawingEnabled, setDrawingEnabled] = useState(false);
+  const [draftCompleted, setDraftCompleted] = useState(false);
+  const [draftCoordinates, setDraftCoordinates] = useState<
+    OperationalCoordinates[]
+  >([]);
+
+  const { zones: operationalZones, source: operationalZoneSource } =
+    useOperationalZoneData();
 
   const [focusedEntities, setFocusedEntities] = useState<OperationalEntity[]>(
     [],
   );
+
+  const [focusRecordId, setFocusRecordId] = useState(
+    initialUrlState.focusRecordId,
+  );
+
+  const [shareStatus, setShareStatus] = useState<ShareStatus>("idle");
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [filters, setFilters] = useState<OperationalMapFilters>(() => ({
+    ...initialUrlState.filters,
+  }));
+
+  const safeSearchParams = useMemo(
+    () =>
+      buildOperationalMapSearchParams({
+        filters,
+        layers,
+        heatmapEnabled,
+        zonesEnabled,
+        connectionsEnabled,
+        focusRecordId,
+      }).toString(),
+    [
+      connectionsEnabled,
+      filters,
+      focusRecordId,
+      heatmapEnabled,
+      layers,
+      zonesEnabled,
+    ],
+  );
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const query = safeSearchParams ? `?${safeSearchParams}` : "";
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${query}${window.location.hash}`,
+    );
+  }, [expanded, safeSearchParams]);
+
+  const copyShareLink = useCallback(async () => {
+    try {
+      const url = new URL(window.location.href);
+      url.search = safeSearchParams;
+      await copyTextToClipboard(url.toString());
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("error");
+    }
+  }, [safeSearchParams]);
 
   const {
     entities,
@@ -129,14 +233,28 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
   );
 
   const selectedZone = useMemo(
-    () =>
-      DEMO_OPERATIONAL_ZONES.find((zone) => zone.id === selectedZoneId) ?? null,
-    [selectedZoneId],
+    () => operationalZones.find((zone) => zone.id === selectedZoneId) ?? null,
+    [operationalZones, selectedZoneId],
+  );
+
+  const searchResults = useMemo(
+    () => filterOperationalEntities(allEntities, searchQuery, filters),
+    [allEntities, filters, searchQuery],
+  );
+
+  const statusOptions = useMemo(
+    () => getOperationalStatusOptions(allEntities),
+    [allEntities],
+  );
+
+  const filtersActive = useMemo(
+    () => hasActiveOperationalMapFilters(filters),
+    [filters],
   );
 
   const visibleEntities = useMemo(
-    () => allEntities.filter((entity) => layers[entity.type]),
-    [allEntities, layers],
+    () => searchResults.filter((entity) => layers[entity.type]),
+    [layers, searchResults],
   );
 
   const interfaceStatus: MapStatus = useMemo(() => {
@@ -275,13 +393,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
   }, [map]);
 
   useEffect(() => {
-    const focusRecordId = new URLSearchParams(window.location.search).get(
-      "focusRecordId",
-    );
-
-    if (!focusRecordId || !/^[A-Za-z0-9_-]{3,80}$/.test(focusRecordId)) {
-      return;
-    }
+    if (!focusRecordId) return;
 
     const focusedRecordId = focusRecordId;
 
@@ -362,7 +474,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [focusRecordId]);
 
   useEffect(() => {
     if (!map || focusedEntities.length === 0) {
@@ -392,8 +504,17 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   const selectEntity = useCallback(
     (entity: OperationalEntity) => {
+      if (drawingEnabled) return;
       setSelectedZoneId(null);
       setSelectedEntityId(entity.id);
+      setLayers((current) =>
+        current[entity.type]
+          ? current
+          : {
+              ...current,
+              [entity.type]: true,
+            },
+      );
 
       if (!map) {
         return;
@@ -408,7 +529,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
         essential: true,
       });
     },
-    [map],
+    [drawingEnabled, map],
   );
 
   const selectZone = useCallback((zone: OperationalZone | null) => {
@@ -421,7 +542,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
 
   const operationalZoneController = useOperationalZones({
     map,
-    zones: DEMO_OPERATIONAL_ZONES,
+    zones: operationalZones,
     enabled: zonesEnabled && mapStatus === "ready",
     selectedZoneId,
     onSelectZone: selectZone,
@@ -431,7 +552,8 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     map,
     entities: visibleEntities,
     selectedEntityId,
-    enabled: mapStatus === "ready" && entitiesStatus === "success",
+    enabled:
+      !drawingEnabled && mapStatus === "ready" && entitiesStatus === "success",
     onSelectEntity: selectEntity,
   });
 
@@ -439,16 +561,42 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     map,
     entities: visibleEntities,
     selectedEntityId,
-    enabled: mapStatus === "ready" && entitiesStatus === "success",
+    enabled:
+      connectionsEnabled &&
+      mapStatus === "ready" &&
+      entitiesStatus === "success",
   });
 
   const { heatmapPointCount } = useOperationalHeatmap({
     map,
-    entities: allEntities.filter((entity) => layers.occurrence),
+    entities: layers.occurrence ? searchResults : [],
     enabled:
-      heatmapEnabled &&
-      mapStatus === "ready" &&
-      entitiesStatus === "success",
+      heatmapEnabled && mapStatus === "ready" && entitiesStatus === "success",
+  });
+
+  const addDraftCoordinate = useCallback(
+    (coordinate: OperationalCoordinates) => {
+      setDraftCoordinates((current) => [...current, coordinate]);
+    },
+    [],
+  );
+
+  const moveDraftCoordinate = useCallback(
+    (index: number, coordinate: OperationalCoordinates) => {
+      setDraftCoordinates((current) =>
+        replaceOperationalPolygonVertex(current, index, coordinate),
+      );
+    },
+    [],
+  );
+
+  useOperationalPolygonDraft({
+    map,
+    enabled: drawingEnabled && mapStatus === "ready",
+    completed: draftCompleted,
+    coordinates: draftCoordinates,
+    onAddCoordinate: addDraftCoordinate,
+    onMoveCoordinate: moveDraftCoordinate,
   });
 
   function toggleLayer(type: OperationalEntityType) {
@@ -469,6 +617,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       occurrence: true,
       person: true,
       vehicle: true,
+      address: true,
       organization: true,
       "point-of-sale": true,
       alert: true,
@@ -480,6 +629,7 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       occurrence: false,
       person: false,
       vehicle: false,
+      address: false,
       organization: false,
       "point-of-sale": false,
       alert: false,
@@ -496,6 +646,10 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
     setHeatmapEnabled((current) => !current);
   }
 
+  function toggleConnections() {
+    setConnectionsEnabled((current) => !current);
+  }
+
   function toggleZones() {
     setZonesEnabled((current) => {
       if (current) {
@@ -503,6 +657,23 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       }
 
       return !current;
+    });
+  }
+
+  function toggleDrawing() {
+    setDrawingEnabled((current) => {
+      const next = !current;
+
+      setDraftCompleted(false);
+      setDraftCoordinates([]);
+
+      if (next) {
+        setSelectedEntityId(null);
+        setSelectedZoneId(null);
+        setZonesEnabled(false);
+      }
+
+      return next;
     });
   }
 
@@ -520,11 +691,21 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
   }
 
   function returnToManaus() {
-    if (!map) {
-      return;
-    }
-
     setSelectedEntityId(null);
+    setSearchQuery("");
+    setFilters({ ...DEFAULT_OPERATIONAL_MAP_FILTERS });
+    setLayers({ ...DEFAULT_OPERATIONAL_MAP_URL_STATE.layers });
+    setZonesEnabled(false);
+    setHeatmapEnabled(false);
+    setConnectionsEnabled(true);
+    setSelectedZoneId(null);
+    setFocusedEntities([]);
+    setFocusRecordId(null);
+    setDrawingEnabled(false);
+    setDraftCompleted(false);
+    setDraftCoordinates([]);
+
+    if (!map) return;
 
     map.flyTo({
       center: MANAUS_CENTER,
@@ -556,22 +737,47 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
       />
 
       <OperationalLayersPanel
-        entities={allEntities}
+        entities={searchResults}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        filters={filters}
+        statusOptions={statusOptions}
+        filtersActive={filtersActive}
         layers={layers}
         visibleConnectionCount={visibleConnectionCount}
+        connectionsEnabled={connectionsEnabled}
         heatmapEnabled={heatmapEnabled}
         heatmapPointCount={heatmapPointCount}
         zonesEnabled={zonesEnabled}
-        zoneCount={DEMO_OPERATIONAL_ZONES.length}
+        zoneCount={operationalZones.length}
+        drawingEnabled={drawingEnabled}
         dataStatus={entitiesStatus}
         generatedAt={generatedAt}
         onToggleLayer={toggleLayer}
         onShowAll={showAllLayers}
         onHideAll={hideAllLayers}
         onToggleHeatmap={toggleHeatmap}
+        onToggleConnections={toggleConnections}
         onToggleZones={toggleZones}
+        onToggleDrawing={toggleDrawing}
+        onSearchQueryChange={(query) => {
+          setSearchQuery(query);
+          setSelectedEntityId(null);
+        }}
+        onFiltersChange={(nextFilters) => {
+          setFilters(nextFilters);
+          setSelectedEntityId(null);
+        }}
+        onClearSearchAndFilters={() => {
+          setSearchQuery("");
+          setFilters(DEFAULT_OPERATIONAL_MAP_FILTERS);
+          setSelectedEntityId(null);
+        }}
+        onSelectSearchResult={selectEntity}
         onReturnToOverview={returnToManaus}
         onReloadData={reloadEntities}
+        onCopyShareLink={expanded ? copyShareLink : undefined}
+        shareStatus={shareStatus}
       />
 
       {selectedEntity && (
@@ -582,16 +788,35 @@ function OperationalMapContent({ expanded = false }: OperationalMapProps) {
         />
       )}
 
-      {!selectedEntity && (
+      {!selectedEntity && !drawingEnabled && (
         <OperationalZonesPanel
           enabled={zonesEnabled}
-          zones={DEMO_OPERATIONAL_ZONES}
+          zones={operationalZones}
+          source={operationalZoneSource}
           selectedZone={selectedZone}
           onToggle={toggleZones}
           onSelect={selectZone}
           onFitAll={operationalZoneController.fitAllZones}
           onFitSelected={operationalZoneController.fitSelectedZone}
           onClearSelection={operationalZoneController.clearSelection}
+        />
+      )}
+
+      {drawingEnabled && (
+        <OperationalPolygonDraftPanel
+          completed={draftCompleted}
+          coordinates={draftCoordinates}
+          onUndo={() => setDraftCoordinates((current) => current.slice(0, -1))}
+          onComplete={() => setDraftCompleted(true)}
+          onRestart={() => {
+            setDraftCompleted(false);
+            setDraftCoordinates([]);
+          }}
+          onClose={() => {
+            setDrawingEnabled(false);
+            setDraftCompleted(false);
+            setDraftCoordinates([]);
+          }}
         />
       )}
 
