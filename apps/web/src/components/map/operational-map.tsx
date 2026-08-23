@@ -557,15 +557,16 @@ function OperationalMapContent({
     onSelectEntity: selectEntity,
   });
 
-  const { visibleConnectionCount } = useOperationalConnections({
+  const { visibleConnectionCount, selectedConnectionCount } =
+    useOperationalConnections({
     map,
     entities: visibleEntities,
     selectedEntityId,
-    enabled:
-      connectionsEnabled &&
-      mapStatus === "ready" &&
-      entitiesStatus === "success",
-  });
+      enabled:
+        connectionsEnabled &&
+        mapStatus === "ready" &&
+        entitiesStatus === "success",
+    });
 
   const { heatmapPointCount } = useOperationalHeatmap({
     map,
@@ -783,6 +784,8 @@ function OperationalMapContent({
       {selectedEntity && (
         <EntityDetailsPanel
           entity={selectedEntity}
+          explicitConnectionCount={selectedConnectionCount}
+          connectionsEnabled={connectionsEnabled}
           onClose={closeDetails}
           onCenter={centerSelectedEntity}
         />
