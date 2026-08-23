@@ -72,7 +72,13 @@ export function useOperationalConnections({
     };
   }, [data, enabled, map]);
 
+  const selectedConnectionCount =
+    enabled && selectedEntityId
+      ? data.features.filter((feature) => feature.properties.selected).length
+      : 0;
+
   return {
     visibleConnectionCount: enabled ? data.features.length : 0,
+    selectedConnectionCount,
   };
 }
