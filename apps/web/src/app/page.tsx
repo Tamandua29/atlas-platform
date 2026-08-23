@@ -3,6 +3,7 @@ import Link from "next/link";
 import { OperationalMap } from "@/components/map/operational-map";
 import {
   OperationalDashboardActivity,
+  OperationalDashboardCommandCenter,
   OperationalDashboardDistributions,
   OperationalDashboardMetrics,
 } from "@/app/operational-dashboard-client";
@@ -167,18 +168,29 @@ export default function Home() {
               <OperationalDashboardMetrics />
             </section>
 
+            <div className="mt-6">
+              <OperationalDashboardCommandCenter />
+            </div>
+
             <section className="mt-6 grid gap-6 xl:grid-cols-2">
               <OperationalDashboardDistributions />
             </section>
 
-            <nav aria-label="Atalhos operacionais" className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <nav
+              aria-label="Atalhos operacionais"
+              className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+            >
               {[
                 ["Mapa expandido", "/operational-map"],
                 ["Diretório de indivíduos", "/intelligence/individuals"],
                 ["Fila de identificação", "/review-queue"],
                 ["Fila de saneamento", "/data-quality/queue"],
               ].map(([label, href]) => (
-                <Link key={href} href={href} className="rounded-xl border border-slate-800 bg-[#0a1020] px-4 py-3 text-sm font-medium text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-300">
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-xl border border-slate-800 bg-[#0a1020] px-4 py-3 text-sm font-medium text-slate-300 transition hover:border-cyan-400/40 hover:text-cyan-300"
+                >
                   {label}
                 </Link>
               ))}
@@ -220,7 +232,6 @@ export default function Home() {
                 </div>
 
                 <OperationalDashboardActivity />
-
               </article>
             </section>
           </div>
