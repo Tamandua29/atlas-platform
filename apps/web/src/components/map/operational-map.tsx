@@ -559,9 +559,9 @@ function OperationalMapContent({
 
   const { visibleConnectionCount, selectedConnectionCount } =
     useOperationalConnections({
-    map,
-    entities: visibleEntities,
-    selectedEntityId,
+      map,
+      entities: visibleEntities,
+      selectedEntityId,
       enabled:
         connectionsEnabled &&
         mapStatus === "ready" &&
