@@ -1,82 +1,316 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { MANAUS_CENTER } from "@/features/operational-map/operational-map.data";
+import { isCoordinateConsistentWithNeighborhood } from "@/features/operational-map/geographic-consistency";
+import { useOperationalZones } from "@/features/operational-map/use-operational-zones";
+import { useOperationalZoneData } from "@/features/operational-map/use-operational-zone-data";
+import { useOperationalConnections } from "@/features/operational-map/use-operational-connections";
+import { useOperationalHeatmap } from "@/features/operational-map/use-operational-heatmap";
+import { useOperationalPolygonDraft } from "@/features/operational-map/use-operational-polygon-draft";
+import { replaceOperationalPolygonVertex } from "@/features/operational-map/operational-map.drawing";
 import {
-  DEMO_OPERATIONAL_ENTITIES,
-  MANAUS_CENTER,
-  OPERATIONAL_ENTITY_CONFIG,
-  OPERATIONAL_PRIORITY_CONFIG,
-} from "@/features/operational-map/operational-map.data";
+  DEFAULT_OPERATIONAL_MAP_FILTERS,
+  filterOperationalEntities,
+  getOperationalStatusOptions,
+  hasActiveOperationalMapFilters,
+} from "@/features/operational-map/operational-map.search";
+import {
+  buildOperationalMapSearchParams,
+  DEFAULT_OPERATIONAL_MAP_URL_STATE,
+  type OperationalMapUrlState,
+} from "@/features/operational-map/operational-map.url-state";
+
+import type { OperationalMapFilters } from "@/features/operational-map/operational-map.search";
 
 import type {
   OperationalEntity,
+  OperationalCoordinates,
   OperationalEntityType,
   OperationalLayerVisibility,
+  OperationalZone,
 } from "@/features/operational-map/operational-map.types";
+
+import { useOperationalEntities } from "./hooks/use-operational-entities";
+import { useOperationalMarkers } from "./hooks/use-operational-markers";
+import { MapStatusOverlays } from "./overlays/map-status-overlays";
+import { EntityDetailsPanel } from "./panels/entity-details-panel";
+import { OperationalLayersPanel } from "./panels/operational-layers-panel";
+import { OperationalPolygonDraftPanel } from "./panels/operational-polygon-draft-panel";
+import { OperationalZonesPanel } from "./panels/operational-zones-panel";
+import { OperationalEntitiesProvider } from "./providers/operational-entities-provider";
 
 type MapStatus = "loading" | "ready" | "error";
 
-const INITIAL_LAYER_VISIBILITY: OperationalLayerVisibility = {
-  occurrence: true,
-  person: true,
-  vehicle: true,
-  alert: true,
+type FocusedIndividualResponse = {
+  success: boolean;
+  individual?: {
+    recordId: string;
+    legalName: string;
+    alias: string | null;
+  };
+  relationships?: {
+    addresses?: Array<{
+      recordId: string;
+      label: string;
+      neighborhood: string | null;
+      latitude: number | null;
+      longitude: number | null;
+    }>;
+  };
 };
 
-export function OperationalMap() {
+function hasValidCoordinates(
+  latitude: number | null,
+  longitude: number | null,
+) {
+  return (
+    typeof latitude === "number" &&
+    Number.isFinite(latitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    typeof longitude === "number" &&
+    Number.isFinite(longitude) &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
+
+type OperationalMapProps = {
+  expanded?: boolean;
+  initialUrlState?: OperationalMapUrlState;
+};
+
+type ShareStatus = "idle" | "copied" | "error";
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+
+  if (!copied) throw new Error("Não foi possível copiar o link.");
+}
+
+function OperationalMapContent({
+  expanded = false,
+  initialUrlState = DEFAULT_OPERATIONAL_MAP_URL_STATE,
+}: OperationalMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<import("maplibre-gl").Map | null>(null);
-  const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
 
-  const [status, setStatus] = useState<MapStatus>("loading");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [map, setMap] = useState<import("maplibre-gl").Map | null>(null);
 
-  const [layers, setLayers] = useState<OperationalLayerVisibility>(
-    INITIAL_LAYER_VISIBILITY,
+  const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
+
+  const [mapErrorMessage, setMapErrorMessage] = useState("");
+
+  const [layers, setLayers] = useState<OperationalLayerVisibility>(() => ({
+    ...initialUrlState.layers,
+  }));
+
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+
+  const [zonesEnabled, setZonesEnabled] = useState(
+    initialUrlState.zonesEnabled,
   );
 
-  const [selectedEntity, setSelectedEntity] =
-    useState<OperationalEntity | null>(null);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(
+    initialUrlState.heatmapEnabled,
+  );
+
+  const [connectionsEnabled, setConnectionsEnabled] = useState(
+    initialUrlState.connectionsEnabled,
+  );
+
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+
+  const [drawingEnabled, setDrawingEnabled] = useState(false);
+  const [draftCompleted, setDraftCompleted] = useState(false);
+  const [draftCoordinates, setDraftCoordinates] = useState<
+    OperationalCoordinates[]
+  >([]);
+
+  const { zones: operationalZones, source: operationalZoneSource } =
+    useOperationalZoneData();
+
+  const [focusedEntities, setFocusedEntities] = useState<OperationalEntity[]>(
+    [],
+  );
+
+  const [focusRecordId, setFocusRecordId] = useState(
+    initialUrlState.focusRecordId,
+  );
+
+  const [shareStatus, setShareStatus] = useState<ShareStatus>("idle");
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [filters, setFilters] = useState<OperationalMapFilters>(() => ({
+    ...initialUrlState.filters,
+  }));
+
+  const safeSearchParams = useMemo(
+    () =>
+      buildOperationalMapSearchParams({
+        filters,
+        layers,
+        heatmapEnabled,
+        zonesEnabled,
+        connectionsEnabled,
+        focusRecordId,
+      }).toString(),
+    [
+      connectionsEnabled,
+      filters,
+      focusRecordId,
+      heatmapEnabled,
+      layers,
+      zonesEnabled,
+    ],
+  );
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const query = safeSearchParams ? `?${safeSearchParams}` : "";
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${query}${window.location.hash}`,
+    );
+  }, [expanded, safeSearchParams]);
+
+  const copyShareLink = useCallback(async () => {
+    try {
+      const url = new URL(window.location.href);
+      url.search = safeSearchParams;
+      await copyTextToClipboard(url.toString());
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("error");
+    }
+  }, [safeSearchParams]);
+
+  const {
+    entities,
+    status: entitiesStatus,
+    errorMessage: entitiesErrorMessage,
+    generatedAt,
+    isLoading: entitiesAreLoading,
+    reload: reloadEntities,
+  } = useOperationalEntities();
+
+  const allEntities = useMemo(() => {
+    if (focusedEntities.length === 0) {
+      return entities;
+    }
+
+    return [
+      ...focusedEntities.filter(
+        (focusedEntity) =>
+          !entities.some((entity) => entity.id === focusedEntity.id),
+      ),
+      ...entities,
+    ];
+  }, [entities, focusedEntities]);
+
+  const selectedEntity = useMemo(
+    () => allEntities.find((entity) => entity.id === selectedEntityId) ?? null,
+    [allEntities, selectedEntityId],
+  );
+
+  const selectedZone = useMemo(
+    () => operationalZones.find((zone) => zone.id === selectedZoneId) ?? null,
+    [operationalZones, selectedZoneId],
+  );
+
+  const searchResults = useMemo(
+    () => filterOperationalEntities(allEntities, searchQuery, filters),
+    [allEntities, filters, searchQuery],
+  );
+
+  const statusOptions = useMemo(
+    () => getOperationalStatusOptions(allEntities),
+    [allEntities],
+  );
+
+  const filtersActive = useMemo(
+    () => hasActiveOperationalMapFilters(filters),
+    [filters],
+  );
+
+  const visibleEntities = useMemo(
+    () => searchResults.filter((entity) => layers[entity.type]),
+    [layers, searchResults],
+  );
+
+  const interfaceStatus: MapStatus = useMemo(() => {
+    if (mapStatus === "error" || entitiesStatus === "error") {
+      return "error";
+    }
+
+    if (mapStatus === "loading" || entitiesAreLoading) {
+      return "loading";
+    }
+
+    return "ready";
+  }, [entitiesAreLoading, entitiesStatus, mapStatus]);
+
+  const interfaceErrorMessage =
+    mapErrorMessage ||
+    entitiesErrorMessage ||
+    "Não foi possível carregar o mapa operacional.";
 
   useEffect(() => {
     let cancelled = false;
 
     async function initializeMap() {
-      if (!containerRef.current || mapRef.current) {
+      if (!containerRef.current || map) {
         return;
       }
 
       try {
-        setStatus("loading");
-        setErrorMessage("");
+        setMapStatus("loading");
+        setMapErrorMessage("");
 
-        const {
-          Map,
-          NavigationControl,
-          FullscreenControl,
-          ScaleControl,
-        } = await import("maplibre-gl");
+        const { Map, NavigationControl, FullscreenControl, ScaleControl } =
+          await import("maplibre-gl");
 
         if (cancelled || !containerRef.current) {
           return;
         }
 
-        const map = new Map({
+        const mapInstance = new Map({
           container: containerRef.current,
+
           style: {
             version: 8,
+
             sources: {
               openStreetMap: {
                 type: "raster",
-                tiles: [
-                  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                ],
+
+                tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+
                 tileSize: 256,
+
                 attribution: "© OpenStreetMap contributors",
               },
             },
+
             layers: [
               {
                 id: "openStreetMap",
@@ -85,12 +319,13 @@ export function OperationalMap() {
               },
             ],
           },
+
           center: MANAUS_CENTER,
           zoom: 10,
           attributionControl: {},
         });
 
-        map.addControl(
+        mapInstance.addControl(
           new NavigationControl({
             showCompass: true,
             showZoom: true,
@@ -98,9 +333,9 @@ export function OperationalMap() {
           "top-right",
         );
 
-        map.addControl(new FullscreenControl(), "top-right");
+        mapInstance.addControl(new FullscreenControl(), "top-right");
 
-        map.addControl(
+        mapInstance.addControl(
           new ScaleControl({
             maxWidth: 120,
             unit: "metric",
@@ -108,37 +343,38 @@ export function OperationalMap() {
           "bottom-left",
         );
 
-        map.on("load", () => {
-          map.resize();
+        mapInstance.on("load", () => {
+          mapInstance.resize();
 
           if (!cancelled) {
-            setStatus("ready");
+            setMap(mapInstance);
+
+            setMapStatus("ready");
           }
         });
 
-        map.on("error", (event) => {
+        mapInstance.on("error", (event) => {
           console.error("Erro do MapLibre:", event.error);
 
           if (!cancelled) {
-            setErrorMessage(
-              event.error?.message ??
-                "Falha ao carregar a base cartográfica.",
+            setMapErrorMessage(
+              event.error?.message ?? "Falha ao carregar a base cartográfica.",
             );
-            setStatus("error");
+
+            setMapStatus("error");
           }
         });
-
-        mapRef.current = map;
       } catch (error) {
         console.error("Falha ao inicializar o mapa:", error);
 
         if (!cancelled) {
-          setErrorMessage(
+          setMapErrorMessage(
             error instanceof Error
               ? error.message
               : "Não foi possível inicializar o mapa.",
           );
-          setStatus("error");
+
+          setMapStatus("error");
         }
       }
     }
@@ -147,112 +383,228 @@ export function OperationalMap() {
 
     return () => {
       cancelled = true;
-
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-
-      mapRef.current?.remove();
-      mapRef.current = null;
     };
-  }, []);
+  }, [map]);
 
   useEffect(() => {
-    let cancelled = false;
+    return () => {
+      map?.remove();
+    };
+  }, [map]);
 
-    async function renderMarkers() {
-      const map = mapRef.current;
+  useEffect(() => {
+    if (!focusRecordId) return;
 
-      if (!map || status !== "ready") {
-        return;
-      }
+    const focusedRecordId = focusRecordId;
 
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
+    const abortController = new AbortController();
 
-      const { Marker } = await import("maplibre-gl");
-
-      if (cancelled) {
-        return;
-      }
-
-      const visibleEntities = DEMO_OPERATIONAL_ENTITIES.filter(
-        (entity) => layers[entity.type],
-      );
-
-      markersRef.current = visibleEntities.map((entity) => {
-        const config = OPERATIONAL_ENTITY_CONFIG[entity.type];
-        const isSelected = selectedEntity?.id === entity.id;
-
-        const markerElement = document.createElement("button");
-
-        markerElement.type = "button";
-        markerElement.setAttribute(
-          "aria-label",
-          `Selecionar ${config.singularLabel.toLowerCase()}: ${entity.title}`,
+    async function loadFocusedIndividual() {
+      try {
+        const response = await fetch(
+          `/api/intelligence/individuals/${encodeURIComponent(
+            focusedRecordId,
+          )}`,
+          {
+            cache: "no-store",
+            signal: abortController.signal,
+          },
         );
 
-        markerElement.style.width = isSelected ? "42px" : "34px";
-        markerElement.style.height = isSelected ? "42px" : "34px";
-        markerElement.style.borderRadius = "999px";
-        markerElement.style.border = isSelected
-          ? "4px solid #ffffff"
-          : "3px solid rgba(255, 255, 255, 0.95)";
-        markerElement.style.backgroundColor = config.color;
-        markerElement.style.boxShadow = isSelected
-          ? `0 0 0 6px ${config.color}55, 0 10px 25px rgba(15, 23, 42, 0.45)`
-          : "0 8px 18px rgba(15, 23, 42, 0.35)";
-        markerElement.style.cursor = "pointer";
-        markerElement.style.transition =
-          "width 160ms ease, height 160ms ease, box-shadow 160ms ease";
-        markerElement.style.position = "relative";
+        if (!response.ok) {
+          return;
+        }
 
-        const centerDot = document.createElement("span");
+        const payload = (await response.json()) as FocusedIndividualResponse;
 
-        centerDot.style.position = "absolute";
-        centerDot.style.left = "50%";
-        centerDot.style.top = "50%";
-        centerDot.style.width = isSelected ? "10px" : "8px";
-        centerDot.style.height = isSelected ? "10px" : "8px";
-        centerDot.style.borderRadius = "999px";
-        centerDot.style.backgroundColor = "#ffffff";
-        centerDot.style.transform = "translate(-50%, -50%)";
+        const individual = payload.individual;
+        const addresses = payload.relationships?.addresses?.filter(
+          (candidate) =>
+            hasValidCoordinates(candidate.latitude, candidate.longitude) &&
+            candidate.latitude !== null &&
+            candidate.longitude !== null &&
+            isCoordinateConsistentWithNeighborhood({
+              neighborhood: candidate.neighborhood,
+              latitude: candidate.latitude,
+              longitude: candidate.longitude,
+            }),
+        );
 
-        markerElement.appendChild(centerDot);
+        if (
+          !payload.success ||
+          !individual ||
+          !addresses ||
+          addresses.length === 0
+        ) {
+          return;
+        }
 
-        markerElement.addEventListener("click", (event) => {
-          event.stopPropagation();
+        const focusEntities = addresses.map((address, index) => ({
+          id: `person:${individual.recordId}:${address.recordId}`,
+          type: "person" as const,
+          title: individual.legalName,
+          description: individual.alias
+            ? `Vulgo: ${individual.alias}`
+            : "Pessoa vinculada ao local selecionado.",
+          coordinates: [address.longitude!, address.latitude!] as [
+            number,
+            number,
+          ],
+          createdAt: "1970-01-01T00:00:00.000Z",
+          priority: "normal" as const,
+          status:
+            index === 0
+              ? "Endereço principal válido"
+              : `Endereço vinculado ${index + 1}`,
+          reference: individual.recordId,
+          locationLabel: address.label,
+        }));
 
-          setSelectedEntity(entity);
-
-          map.flyTo({
-            center: entity.coordinates,
-            zoom: Math.max(map.getZoom(), 13),
-            duration: 900,
-            essential: true,
-          });
-        });
-
-        return new Marker({
-          element: markerElement,
-          anchor: "center",
-        })
-          .setLngLat(entity.coordinates)
-          .addTo(map);
-      });
+        setFocusedEntities(focusEntities);
+        setSelectedEntityId(focusEntities[0].id);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
     }
 
-    void renderMarkers();
+    void loadFocusedIndividual();
 
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
-  }, [layers, selectedEntity, status]);
+  }, [focusRecordId]);
+
+  useEffect(() => {
+    if (!map || focusedEntities.length === 0) {
+      return;
+    }
+
+    if (focusedEntities.length === 1) {
+      map.flyTo({
+        center: focusedEntities[0].coordinates,
+        zoom: Math.max(map.getZoom(), 15),
+        duration: 900,
+        essential: true,
+      });
+      return;
+    }
+
+    const longitudes = focusedEntities.map((entity) => entity.coordinates[0]);
+    const latitudes = focusedEntities.map((entity) => entity.coordinates[1]);
+    map.fitBounds(
+      [
+        [Math.min(...longitudes), Math.min(...latitudes)],
+        [Math.max(...longitudes), Math.max(...latitudes)],
+      ],
+      { padding: 100, maxZoom: 15, duration: 900 },
+    );
+  }, [focusedEntities, map]);
+
+  const selectEntity = useCallback(
+    (entity: OperationalEntity) => {
+      if (drawingEnabled) return;
+      setSelectedZoneId(null);
+      setSelectedEntityId(entity.id);
+      setLayers((current) =>
+        current[entity.type]
+          ? current
+          : {
+              ...current,
+              [entity.type]: true,
+            },
+      );
+
+      if (!map) {
+        return;
+      }
+
+      map.flyTo({
+        center: entity.coordinates,
+
+        zoom: Math.max(map.getZoom(), 13),
+
+        duration: 900,
+        essential: true,
+      });
+    },
+    [drawingEnabled, map],
+  );
+
+  const selectZone = useCallback((zone: OperationalZone | null) => {
+    setSelectedZoneId(zone?.id ?? null);
+
+    if (zone) {
+      setSelectedEntityId(null);
+    }
+  }, []);
+
+  const operationalZoneController = useOperationalZones({
+    map,
+    zones: operationalZones,
+    enabled: zonesEnabled && mapStatus === "ready",
+    selectedZoneId,
+    onSelectZone: selectZone,
+  });
+
+  useOperationalMarkers({
+    map,
+    entities: visibleEntities,
+    selectedEntityId,
+    enabled:
+      !drawingEnabled && mapStatus === "ready" && entitiesStatus === "success",
+    onSelectEntity: selectEntity,
+  });
+
+  const { visibleConnectionCount, selectedConnectionCount } =
+    useOperationalConnections({
+      map,
+      entities: visibleEntities,
+      selectedEntityId,
+      enabled:
+        connectionsEnabled &&
+        mapStatus === "ready" &&
+        entitiesStatus === "success",
+    });
+
+  const { heatmapPointCount } = useOperationalHeatmap({
+    map,
+    entities: layers.occurrence ? searchResults : [],
+    enabled:
+      heatmapEnabled && mapStatus === "ready" && entitiesStatus === "success",
+  });
+
+  const addDraftCoordinate = useCallback(
+    (coordinate: OperationalCoordinates) => {
+      setDraftCoordinates((current) => [...current, coordinate]);
+    },
+    [],
+  );
+
+  const moveDraftCoordinate = useCallback(
+    (index: number, coordinate: OperationalCoordinates) => {
+      setDraftCoordinates((current) =>
+        replaceOperationalPolygonVertex(current, index, coordinate),
+      );
+    },
+    [],
+  );
+
+  useOperationalPolygonDraft({
+    map,
+    enabled: drawingEnabled && mapStatus === "ready",
+    completed: draftCompleted,
+    coordinates: draftCoordinates,
+    onAddCoordinate: addDraftCoordinate,
+    onMoveCoordinate: moveDraftCoordinate,
+  });
 
   function toggleLayer(type: OperationalEntityType) {
     const layerWillBeHidden = layers[type];
 
     if (layerWillBeHidden && selectedEntity?.type === type) {
-      setSelectedEntity(null);
+      setSelectedEntityId(null);
     }
 
     setLayers((current) => ({
@@ -266,6 +618,9 @@ export function OperationalMap() {
       occurrence: true,
       person: true,
       vehicle: true,
+      address: true,
+      organization: true,
+      "point-of-sale": true,
       alert: true,
     });
   }
@@ -275,19 +630,55 @@ export function OperationalMap() {
       occurrence: false,
       person: false,
       vehicle: false,
+      address: false,
+      organization: false,
+      "point-of-sale": false,
       alert: false,
     });
 
-    setSelectedEntity(null);
+    setSelectedEntityId(null);
   }
 
   function closeDetails() {
-    setSelectedEntity(null);
+    setSelectedEntityId(null);
+  }
+
+  function toggleHeatmap() {
+    setHeatmapEnabled((current) => !current);
+  }
+
+  function toggleConnections() {
+    setConnectionsEnabled((current) => !current);
+  }
+
+  function toggleZones() {
+    setZonesEnabled((current) => {
+      if (current) {
+        setSelectedZoneId(null);
+      }
+
+      return !current;
+    });
+  }
+
+  function toggleDrawing() {
+    setDrawingEnabled((current) => {
+      const next = !current;
+
+      setDraftCompleted(false);
+      setDraftCoordinates([]);
+
+      if (next) {
+        setSelectedEntityId(null);
+        setSelectedZoneId(null);
+        setZonesEnabled(false);
+      }
+
+      return next;
+    });
   }
 
   function centerSelectedEntity() {
-    const map = mapRef.current;
-
     if (!map || !selectedEntity) {
       return;
     }
@@ -301,13 +692,21 @@ export function OperationalMap() {
   }
 
   function returnToManaus() {
-    const map = mapRef.current;
+    setSelectedEntityId(null);
+    setSearchQuery("");
+    setFilters({ ...DEFAULT_OPERATIONAL_MAP_FILTERS });
+    setLayers({ ...DEFAULT_OPERATIONAL_MAP_URL_STATE.layers });
+    setZonesEnabled(false);
+    setHeatmapEnabled(false);
+    setConnectionsEnabled(true);
+    setSelectedZoneId(null);
+    setFocusedEntities([]);
+    setFocusRecordId(null);
+    setDrawingEnabled(false);
+    setDraftCompleted(false);
+    setDraftCoordinates([]);
 
-    if (!map) {
-      return;
-    }
-
-    setSelectedEntity(null);
+    if (!map) return;
 
     map.flyTo({
       center: MANAUS_CENTER,
@@ -317,292 +716,128 @@ export function OperationalMap() {
     });
   }
 
-  function reloadPage() {
-    window.location.reload();
+  async function reloadInterface() {
+    if (mapStatus === "error") {
+      window.location.reload();
+      return;
+    }
+
+    await reloadEntities();
   }
 
-  const activeLayerCount = Object.values(layers).filter(Boolean).length;
-
-  const visibleEntityCount = DEMO_OPERATIONAL_ENTITIES.filter(
-    (entity) => layers[entity.type],
-  ).length;
-
-  const selectedEntityConfiguration = selectedEntity
-    ? OPERATIONAL_ENTITY_CONFIG[selectedEntity.type]
-    : null;
-
-  const selectedPriority = selectedEntity?.priority ?? "normal";
-
-  const selectedPriorityConfiguration = selectedEntity
-    ? OPERATIONAL_PRIORITY_CONFIG[selectedPriority]
-    : null;
-
-  const formattedSelectedDate = selectedEntity
-    ? new Intl.DateTimeFormat("pt-BR", {
-        dateStyle: "short",
-        timeStyle: "short",
-      }).format(new Date(selectedEntity.createdAt))
-    : "";
-
   return (
-    <div className="relative h-[520px] w-full overflow-hidden bg-[#020617]">
+    <div
+      className={`relative w-full overflow-hidden bg-[#020617] ${
+        expanded ? "h-[calc(100vh-9rem)] min-h-[680px]" : "h-[520px]"
+      }`}
+    >
       <div
         ref={containerRef}
         className="absolute inset-0 h-full w-full"
         aria-label="Mapa operacional de Manaus"
       />
 
-      <aside className="absolute left-4 top-4 z-20 w-60 rounded-xl border border-slate-700 bg-slate-950/90 p-3 shadow-xl backdrop-blur">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Camadas operacionais
-            </p>
+      <OperationalLayersPanel
+        entities={searchResults}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        filters={filters}
+        statusOptions={statusOptions}
+        filtersActive={filtersActive}
+        layers={layers}
+        visibleConnectionCount={visibleConnectionCount}
+        connectionsEnabled={connectionsEnabled}
+        heatmapEnabled={heatmapEnabled}
+        heatmapPointCount={heatmapPointCount}
+        zonesEnabled={zonesEnabled}
+        zoneCount={operationalZones.length}
+        drawingEnabled={drawingEnabled}
+        dataStatus={entitiesStatus}
+        generatedAt={generatedAt}
+        onToggleLayer={toggleLayer}
+        onShowAll={showAllLayers}
+        onHideAll={hideAllLayers}
+        onToggleHeatmap={toggleHeatmap}
+        onToggleConnections={toggleConnections}
+        onToggleZones={toggleZones}
+        onToggleDrawing={toggleDrawing}
+        onSearchQueryChange={(query) => {
+          setSearchQuery(query);
+          setSelectedEntityId(null);
+        }}
+        onFiltersChange={(nextFilters) => {
+          setFilters(nextFilters);
+          setSelectedEntityId(null);
+        }}
+        onClearSearchAndFilters={() => {
+          setSearchQuery("");
+          setFilters(DEFAULT_OPERATIONAL_MAP_FILTERS);
+          setSelectedEntityId(null);
+        }}
+        onSelectSearchResult={selectEntity}
+        onReturnToOverview={returnToManaus}
+        onReloadData={reloadEntities}
+        onCopyShareLink={expanded ? copyShareLink : undefined}
+        shareStatus={shareStatus}
+      />
 
-            <p className="mt-1 text-[11px] text-slate-500">
-              {activeLayerCount} camadas · {visibleEntityCount} registros
-            </p>
-          </div>
-
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 text-xs font-bold text-cyan-300">
-            {visibleEntityCount}
-          </span>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {(
-            Object.keys(
-              OPERATIONAL_ENTITY_CONFIG,
-            ) as OperationalEntityType[]
-          ).map((type) => {
-            const config = OPERATIONAL_ENTITY_CONFIG[type];
-            const active = layers[type];
-
-            const entityCount = DEMO_OPERATIONAL_ENTITIES.filter(
-              (entity) => entity.type === type,
-            ).length;
-
-            return (
-              <button
-                key={type}
-                type="button"
-                className={[
-                  "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition",
-                  active
-                    ? "border-slate-600 bg-slate-800/90 text-white"
-                    : "border-slate-800 bg-slate-950/70 text-slate-500",
-                ].join(" ")}
-                onClick={() => toggleLayer(type)}
-              >
-                <span className="flex items-center gap-2">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{
-                      backgroundColor: active ? config.color : "#475569",
-                    }}
-                  />
-
-                  {config.label}
-                </span>
-
-                <span className="flex items-center gap-2">
-                  <span>{entityCount}</span>
-                  <span>{active ? "Ativa" : "Oculta"}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3">
-          <button
-            type="button"
-            className="rounded-lg border border-slate-700 px-2 py-2 text-[11px] text-slate-300 transition hover:border-slate-600 hover:bg-slate-800"
-            onClick={showAllLayers}
-          >
-            Exibir todas
-          </button>
-
-          <button
-            type="button"
-            className="rounded-lg border border-slate-700 px-2 py-2 text-[11px] text-slate-300 transition hover:border-slate-600 hover:bg-slate-800"
-            onClick={hideAllLayers}
-          >
-            Ocultar todas
-          </button>
-        </div>
-
-        <button
-          type="button"
-          className="mt-2 w-full rounded-lg border border-slate-700 px-2 py-2 text-[11px] text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/10 hover:text-cyan-200"
-          onClick={returnToManaus}
-        >
-          Retornar à visão geral
-        </button>
-      </aside>
-
-      {selectedEntity &&
-        selectedEntityConfiguration &&
-        selectedPriorityConfiguration && (
-          <aside className="absolute bottom-4 right-4 top-4 z-20 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950/95 shadow-2xl backdrop-blur">
-            <div
-              className="h-1.5 w-full"
-              style={{
-                backgroundColor: selectedEntityConfiguration.color,
-              }}
-            />
-
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
-              <div>
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-                  style={{
-                    color: selectedEntityConfiguration.color,
-                  }}
-                >
-                  {selectedEntityConfiguration.singularLabel}
-                </p>
-
-                <h3 className="mt-2 text-lg font-semibold leading-6 text-white">
-                  {selectedEntity.title}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 text-sm text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white"
-                onClick={closeDetails}
-                aria-label="Fechar painel de detalhes"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className="rounded-full px-3 py-1 text-[11px] font-semibold"
-                  style={{
-                    color: selectedPriorityConfiguration.color,
-                    backgroundColor:
-                      selectedPriorityConfiguration.backgroundColor,
-                  }}
-                >
-                  Prioridade {selectedPriorityConfiguration.label}
-                </span>
-
-                <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-300">
-                  {selectedEntity.status}
-                </span>
-              </div>
-
-              <p className="mt-5 text-sm leading-6 text-slate-300">
-                {selectedEntity.description}
-              </p>
-
-              <dl className="mt-6 space-y-4">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Referência
-                  </dt>
-
-                  <dd className="mt-2 text-sm font-medium text-white">
-                    {selectedEntity.reference}
-                  </dd>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Localização
-                  </dt>
-
-                  <dd className="mt-2 text-sm font-medium text-white">
-                    {selectedEntity.locationLabel}
-                  </dd>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Coordenadas
-                  </dt>
-
-                  <dd className="mt-2 font-mono text-xs text-cyan-300">
-                    {selectedEntity.coordinates[1].toFixed(6)},{" "}
-                    {selectedEntity.coordinates[0].toFixed(6)}
-                  </dd>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Data do registro
-                  </dt>
-
-                  <dd className="mt-2 text-sm font-medium text-white">
-                    {formattedSelectedDate}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 border-t border-slate-800 p-4">
-              <button
-                type="button"
-                className="rounded-xl border border-slate-700 px-3 py-3 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white"
-                onClick={closeDetails}
-              >
-                Fechar
-              </button>
-
-              <button
-                type="button"
-                className="rounded-xl bg-cyan-400 px-3 py-3 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300"
-                onClick={centerSelectedEntity}
-              >
-                Centralizar
-              </button>
-            </div>
-          </aside>
-        )}
-
-      {status === "loading" && (
-        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-slate-950/80">
-          <div className="text-center">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-cyan-400" />
-
-            <p className="mt-3 text-sm text-slate-300">
-              Carregando mapa operacional...
-            </p>
-          </div>
-        </div>
+      {selectedEntity && (
+        <EntityDetailsPanel
+          entity={selectedEntity}
+          explicitConnectionCount={selectedConnectionCount}
+          connectionsEnabled={connectionsEnabled}
+          onClose={closeDetails}
+          onCenter={centerSelectedEntity}
+        />
       )}
 
-      {status === "error" && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950 p-6">
-          <div className="max-w-md rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-center">
-            <p className="font-semibold text-red-300">
-              Não foi possível carregar o mapa
-            </p>
-
-            <p className="mt-2 break-words text-sm leading-6 text-slate-300">
-              {errorMessage}
-            </p>
-
-            <button
-              type="button"
-              className="mt-4 rounded-lg border border-slate-600 px-4 py-2 text-sm text-white transition hover:bg-slate-800"
-              onClick={reloadPage}
-            >
-              Tentar novamente
-            </button>
-          </div>
-        </div>
+      {!selectedEntity && !drawingEnabled && (
+        <OperationalZonesPanel
+          enabled={zonesEnabled}
+          zones={operationalZones}
+          source={operationalZoneSource}
+          selectedZone={selectedZone}
+          onToggle={toggleZones}
+          onSelect={selectZone}
+          onFitAll={operationalZoneController.fitAllZones}
+          onFitSelected={operationalZoneController.fitSelectedZone}
+          onClearSelection={operationalZoneController.clearSelection}
+        />
       )}
 
-      {status === "ready" && !selectedEntity && (
-        <div className="pointer-events-none absolute bottom-4 right-4 z-10 rounded-lg border border-slate-700 bg-slate-950/85 px-3 py-2 text-xs text-slate-300 shadow-lg backdrop-blur">
-          Clique em um marcador para consultar os detalhes
-        </div>
+      {drawingEnabled && (
+        <OperationalPolygonDraftPanel
+          completed={draftCompleted}
+          coordinates={draftCoordinates}
+          onUndo={() => setDraftCoordinates((current) => current.slice(0, -1))}
+          onComplete={() => setDraftCompleted(true)}
+          onRestart={() => {
+            setDraftCompleted(false);
+            setDraftCoordinates([]);
+          }}
+          onClose={() => {
+            setDrawingEnabled(false);
+            setDraftCompleted(false);
+            setDraftCoordinates([]);
+          }}
+        />
       )}
+
+      <MapStatusOverlays
+        status={interfaceStatus}
+        errorMessage={interfaceErrorMessage}
+        hasSelectedEntity={Boolean(selectedEntity)}
+        isEmpty={entitiesStatus === "success" && allEntities.length === 0}
+        onReload={reloadInterface}
+      />
     </div>
+  );
+}
+
+export function OperationalMap(props: OperationalMapProps) {
+  return (
+    <OperationalEntitiesProvider>
+      <OperationalMapContent {...props} />
+    </OperationalEntitiesProvider>
   );
 }
