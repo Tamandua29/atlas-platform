@@ -6,11 +6,13 @@ import {
 } from "@/features/operational-map/operational-map.data";
 import { getOperationalEntityProfileHref } from "@/features/operational-map/operational-entity-profile-link";
 
+import type { OperationalConnectionSummary } from "@/features/operational-map/operational-map.connections";
 import type { OperationalEntity } from "@/features/operational-map/operational-map.types";
 
 type EntityDetailsPanelProps = {
   entity: OperationalEntity;
   explicitConnectionCount: number;
+  explicitConnections: OperationalConnectionSummary[];
   connectionsEnabled: boolean;
   onClose: () => void;
   onCenter: () => void;
@@ -32,6 +34,7 @@ function formatEntityDate(createdAt: string) {
 export function EntityDetailsPanel({
   entity,
   explicitConnectionCount,
+  explicitConnections,
   connectionsEnabled,
   onClose,
   onCenter,
@@ -167,6 +170,33 @@ export function EntityDetailsPanel({
               Contagem restrita aos registros visíveis ligados explicitamente
               na fonte. Proximidade geográfica não cria vínculo.
             </p>
+
+            {connectionsEnabled && explicitConnections.length > 0 && (
+              <ul className="mt-4 space-y-2" aria-label="Entidades explicitamente conectadas">
+                {explicitConnections.map((connection) => {
+                  const configuration =
+                    OPERATIONAL_ENTITY_CONFIG[connection.type];
+
+                  return (
+                    <li
+                      key={connection.id}
+                      className="rounded-lg border border-slate-700/70 bg-slate-950/50 px-3 py-2"
+                    >
+                      <p
+                        className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                        style={{ color: configuration.color }}
+                      >
+                        {configuration.singularLabel}
+                      </p>
+
+                      <p className="mt-1 truncate text-sm font-medium text-slate-100">
+                        {connection.title}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </dl>
       </div>
