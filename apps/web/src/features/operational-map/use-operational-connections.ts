@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo } from "react";
 
-import { buildOperationalConnections } from "./operational-map.connections";
+import {
+  buildOperationalConnections,
+  listExplicitOperationalConnections,
+} from "./operational-map.connections";
 import type { OperationalEntity } from "./operational-map.types";
 
 const SOURCE_ID = "operational-connections";
@@ -24,6 +27,14 @@ export function useOperationalConnections({
   const data = useMemo(
     () => buildOperationalConnections(entities, selectedEntityId),
     [entities, selectedEntityId],
+  );
+
+  const selectedConnections = useMemo(
+    () =>
+      enabled
+        ? listExplicitOperationalConnections(entities, selectedEntityId)
+        : [],
+    [enabled, entities, selectedEntityId],
   );
 
   useEffect(() => {
@@ -72,13 +83,9 @@ export function useOperationalConnections({
     };
   }, [data, enabled, map]);
 
-  const selectedConnectionCount =
-    enabled && selectedEntityId
-      ? data.features.filter((feature) => feature.properties.selected).length
-      : 0;
-
   return {
     visibleConnectionCount: enabled ? data.features.length : 0,
-    selectedConnectionCount,
+    selectedConnectionCount: selectedConnections.length,
+    selectedConnections,
   };
 }
