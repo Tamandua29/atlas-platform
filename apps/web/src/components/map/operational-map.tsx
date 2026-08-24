@@ -557,7 +557,7 @@ function OperationalMapContent({
     onSelectEntity: selectEntity,
   });
 
-  const { visibleConnectionCount, selectedConnectionCount } =
+  const { visibleConnectionCount, selectedConnectionCount, selectedConnections } =
     useOperationalConnections({
       map,
       entities: visibleEntities,
@@ -785,6 +785,7 @@ function OperationalMapContent({
         <EntityDetailsPanel
           entity={selectedEntity}
           explicitConnectionCount={selectedConnectionCount}
+          explicitConnections={selectedConnections}
           connectionsEnabled={connectionsEnabled}
           onClose={closeDetails}
           onCenter={centerSelectedEntity}
