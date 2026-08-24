@@ -20,6 +20,11 @@ export type OperationalConnectionFeatureCollection = {
   features: ConnectionFeature[];
 };
 
+export type OperationalConnectionSummary = Pick<
+  OperationalEntity,
+  "id" | "type" | "title"
+>;
+
 function shareExplicitRelationship(
   first: OperationalEntity,
   second: OperationalEntity,
@@ -36,6 +41,32 @@ function haveDistinctCoordinates(
     first.coordinates[0] !== second.coordinates[0] ||
     first.coordinates[1] !== second.coordinates[1]
   );
+}
+
+export function listExplicitOperationalConnections(
+  entities: OperationalEntity[],
+  selectedEntityId: string | null,
+): OperationalConnectionSummary[] {
+  if (!selectedEntityId) return [];
+
+  const selectedEntity = entities.find(
+    (entity) => entity.id === selectedEntityId,
+  );
+  if (!selectedEntity) return [];
+
+  return entities
+    .filter(
+      (entity) =>
+        entity.id !== selectedEntity.id &&
+        shareExplicitRelationship(selectedEntity, entity) &&
+        haveDistinctCoordinates(selectedEntity, entity),
+    )
+    .map(({ id, type, title }) => ({ id, type, title }))
+    .sort(
+      (first, second) =>
+        first.type.localeCompare(second.type) ||
+        first.title.localeCompare(second.title, "pt-BR"),
+    );
 }
 
 export function buildOperationalConnections(
