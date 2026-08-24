@@ -557,8 +557,11 @@ function OperationalMapContent({
     onSelectEntity: selectEntity,
   });
 
-  const { visibleConnectionCount, selectedConnectionCount, selectedConnections } =
-    useOperationalConnections({
+  const {
+    visibleConnectionCount,
+    selectedConnectionCount,
+    selectedConnections,
+  } = useOperationalConnections({
       map,
       entities: visibleEntities,
       selectedEntityId,
