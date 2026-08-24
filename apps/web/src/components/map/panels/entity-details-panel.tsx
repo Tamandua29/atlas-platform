@@ -172,7 +172,10 @@ export function EntityDetailsPanel({
             </p>
 
             {connectionsEnabled && explicitConnections.length > 0 && (
-              <ul className="mt-4 space-y-2" aria-label="Entidades explicitamente conectadas">
+              <ul
+                className="mt-4 space-y-2"
+                aria-label="Entidades explicitamente conectadas"
+              >
                 {explicitConnections.map((connection) => {
                   const configuration =
                     OPERATIONAL_ENTITY_CONFIG[connection.type];
