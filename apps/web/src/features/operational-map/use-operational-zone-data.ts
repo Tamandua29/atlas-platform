@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 
 import { DEMO_OPERATIONAL_ZONES } from "./operational-map.zones";
-import { fetchOperationalZones, type OperationalZoneSource } from "./operational-zones.client";
+import {
+  fetchOperationalZones,
+  type OperationalZoneSource,
+} from "./operational-zones.client";
 import type { OperationalZone } from "./operational-map.types";
 
 export function useOperationalZoneData() {
   const [zones, setZones] = useState<OperationalZone[]>(DEMO_OPERATIONAL_ZONES);
-  const [source, setSource] = useState<OperationalZoneSource>("synthetic-fallback");
+  const [source, setSource] =
+    useState<OperationalZoneSource>("synthetic-fallback");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -18,7 +22,8 @@ export function useOperationalZoneData() {
         setSource(result.source);
       })
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
         setZones(DEMO_OPERATIONAL_ZONES);
         setSource("synthetic-fallback");
       });

@@ -66,27 +66,35 @@ export async function listPhotosForIndividual(
 
   return records.flatMap((record) => {
     if (record.fields["Registro Ativo"] === false) return [];
-    if (!record.fields["Indivíduos Relacionados"]?.includes(recordId)) return [];
+    if (!record.fields["Indivíduos Relacionados"]?.includes(recordId))
+      return [];
     const type = record.fields["Tipo de Evidência"]?.trim();
     if (!type || !allowedEvidenceTypes.has(type)) return [];
 
-    return (record.fields["Arquivo ou Mídia"] || []).flatMap((attachment, index) => {
-      if (!attachment.url || !attachment.type?.startsWith("image/")) return [];
+    return (record.fields["Arquivo ou Mídia"] || []).flatMap(
+      (attachment, index) => {
+        if (!attachment.url || !attachment.type?.startsWith("image/"))
+          return [];
 
-      return [{
-        evidenceRecordId: record.id,
-        attachmentId: attachment.id || `${record.id}-${index}`,
-        title: record.fields["Título da Evidência"]?.trim() || type,
-        url: attachment.url,
-        thumbnailUrl: attachment.thumbnails?.large?.url
-          || attachment.thumbnails?.full?.url
-          || attachment.thumbnails?.small?.url
-          || attachment.url,
-        capturedAt: record.fields["Data e Hora da Obtenção"] || null,
-        verificationStatus: record.fields["Situação da Verificação"]?.trim() || null,
-        width: attachment.width || null,
-        height: attachment.height || null,
-      }];
-    });
+        return [
+          {
+            evidenceRecordId: record.id,
+            attachmentId: attachment.id || `${record.id}-${index}`,
+            title: record.fields["Título da Evidência"]?.trim() || type,
+            url: attachment.url,
+            thumbnailUrl:
+              attachment.thumbnails?.large?.url ||
+              attachment.thumbnails?.full?.url ||
+              attachment.thumbnails?.small?.url ||
+              attachment.url,
+            capturedAt: record.fields["Data e Hora da Obtenção"] || null,
+            verificationStatus:
+              record.fields["Situação da Verificação"]?.trim() || null,
+            width: attachment.width || null,
+            height: attachment.height || null,
+          },
+        ];
+      },
+    );
   });
 }

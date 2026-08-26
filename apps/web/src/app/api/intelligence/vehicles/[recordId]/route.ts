@@ -32,20 +32,22 @@ export async function GET(
       );
     }
 
-    const auditPersisted = await persistAuditSafely(AuditEntry.create({
-      action: "intelligence.vehicles.profile",
-      outcome: "success",
-      occurredAt: new Date(),
-      correlationId,
-      processedCount: 1,
-      successCount: 1,
-      metadata: {
-        actorId: authorization.session.actorId,
-        actorRole: authorization.session.role,
-        recordId,
-        mode: "protected-vehicle-profile",
-      },
-    }));
+    const auditPersisted = await persistAuditSafely(
+      AuditEntry.create({
+        action: "intelligence.vehicles.profile",
+        outcome: "success",
+        occurredAt: new Date(),
+        correlationId,
+        processedCount: 1,
+        successCount: 1,
+        metadata: {
+          actorId: authorization.session.actorId,
+          actorRole: authorization.session.role,
+          recordId,
+          mode: "protected-vehicle-profile",
+        },
+      }),
+    );
 
     return NextResponse.json(
       {
@@ -60,7 +62,11 @@ export async function GET(
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, correlationId, message: error instanceof Error ? error.message : "Erro desconhecido." },
+      {
+        success: false,
+        correlationId,
+        message: error instanceof Error ? error.message : "Erro desconhecido.",
+      },
       { status: 500 },
     );
   }

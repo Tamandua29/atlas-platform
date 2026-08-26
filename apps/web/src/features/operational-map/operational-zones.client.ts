@@ -17,7 +17,9 @@ export async function fetchOperationalZones(signal?: AbortSignal) {
   });
   const body = (await response.json()) as ResponseBody;
   if (!response.ok || !body.success || !body.source) {
-    throw new Error(body.message ?? "Não foi possível carregar as áreas operacionais.");
+    throw new Error(
+      body.message ?? "Não foi possível carregar as áreas operacionais.",
+    );
   }
   return { zones: body.zones, source: body.source };
 }

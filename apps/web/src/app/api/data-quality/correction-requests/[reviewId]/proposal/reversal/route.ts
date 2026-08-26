@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   let action = "unknown";
 
   try {
-    const payload = await request.json() as {
+    const payload = (await request.json()) as {
       action?: unknown;
       reason?: unknown;
       decision?: unknown;
@@ -46,10 +46,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       });
     } else if (action === "decide") {
       if (
-        (payload.decision !== "approve" && payload.decision !== "reject")
-        || typeof payload.reason !== "string"
+        (payload.decision !== "approve" && payload.decision !== "reject") ||
+        typeof payload.reason !== "string"
       ) {
-        throw new ValidationError("A decisão e sua justificativa são obrigatórias.");
+        throw new ValidationError(
+          "A decisão e sua justificativa são obrigatórias.",
+        );
       }
       result = await decideCorrectionReversal({
         reviewId,
@@ -59,8 +61,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         decidedAt: new Date(),
       });
     } else if (action === "execute") {
-      if (typeof payload.confirmation !== "string" || typeof payload.note !== "string") {
-        throw new ValidationError("A confirmação e a nota da reversão são obrigatórias.");
+      if (
+        typeof payload.confirmation !== "string" ||
+        typeof payload.note !== "string"
+      ) {
+        throw new ValidationError(
+          "A confirmação e a nota da reversão são obrigatórias.",
+        );
       }
       result = await executeCorrectionReversal({
         reviewId,

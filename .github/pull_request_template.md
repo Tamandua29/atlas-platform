@@ -4,7 +4,7 @@ Descreva a capacidade, correção ou decisão implementada.
 
 ## Alterações
 
-- 
+-
 
 ## Validação
 

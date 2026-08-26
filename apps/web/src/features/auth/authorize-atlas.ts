@@ -28,7 +28,10 @@ export async function authorizeAtlas(
     return {
       authorized: false,
       response: NextResponse.json(
-        { success: false, message: "Seu perfil não possui permissão para esta operação." },
+        {
+          success: false,
+          message: "Seu perfil não possui permissão para esta operação.",
+        },
         { status: 403 },
       ),
     };

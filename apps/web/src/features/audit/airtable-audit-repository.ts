@@ -1,9 +1,6 @@
 import "server-only";
 
-import type {
-  AuditEntry,
-  AuditRepository,
-} from "@atlas/kernel";
+import type { AuditEntry, AuditRepository } from "@atlas/kernel";
 
 import {
   createAirtableRecord,
@@ -20,38 +17,22 @@ type ExistingAuditFields = {
   "Identificador da Sessão ou Requisição"?: string;
 };
 
-function escapeFormulaValue(
-  value: string,
-): string {
-  return value.replace(
-    /'/g,
-    "\\'",
-  );
+function escapeFormulaValue(value: string): string {
+  return value.replace(/'/g, "\\'");
 }
 
-export class AirtableAuditRepository
-  implements AuditRepository
-{
-  async save(
-    entry: AuditEntry,
-  ): Promise<void> {
-    const correlationId =
-      escapeFormulaValue(
-        entry.correlationId,
-      );
+export class AirtableAuditRepository implements AuditRepository {
+  async save(entry: AuditEntry): Promise<void> {
+    const correlationId = escapeFormulaValue(entry.correlationId);
 
-    const existing =
-      await listAllAirtableRecords<ExistingAuditFields>(
-        AUDIT_TABLE_ID,
-        {
-          fields: [
-            "Identificador da Sessão ou Requisição",
-          ],
-          filterByFormula:
-            `{Identificador da Sessão ou Requisição}='${correlationId}'`,
-          maxRecords: 1,
-        },
-      );
+    const existing = await listAllAirtableRecords<ExistingAuditFields>(
+      AUDIT_TABLE_ID,
+      {
+        fields: ["Identificador da Sessão ou Requisição"],
+        filterByFormula: `{Identificador da Sessão ou Requisição}='${correlationId}'`,
+        maxRecords: 1,
+      },
+    );
 
     if (existing.length > 0) {
       return;
@@ -59,26 +40,18 @@ export class AirtableAuditRepository
 
     await createAirtableRecord<AirtableAuditFields>(
       AUDIT_TABLE_ID,
-      mapAuditEntryToAirtable(
-        entry,
-      ),
+      mapAuditEntryToAirtable(entry),
     );
   }
 }
 
-export async function persistAuditSafely(
-  entry: AuditEntry,
-): Promise<boolean> {
+export async function persistAuditSafely(entry: AuditEntry): Promise<boolean> {
   try {
-    await new AirtableAuditRepository()
-      .save(entry);
+    await new AirtableAuditRepository().save(entry);
 
     return true;
   } catch (error) {
-    console.error(
-      "Falha isolada na persistência da auditoria:",
-      error,
-    );
+    console.error("Falha isolada na persistência da auditoria:", error);
 
     return false;
   }

@@ -1,9 +1,6 @@
 import "server-only";
 
-import {
-  isStructurallyValidCpf,
-  normalizeCpf,
-} from "@atlas/kernel";
+import { isStructurallyValidCpf, normalizeCpf } from "@atlas/kernel";
 
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
@@ -76,8 +73,13 @@ export async function getIndividualDataQualityMetrics(): Promise<IndividualDataQ
       ? isStructurallyValidCpf(normalizedCpf)
       : false;
 
-    completedFields += [hasName, hasBirthDate, hasMotherName, hasCpf, hasIdentityDocument]
-      .filter(Boolean).length;
+    completedFields += [
+      hasName,
+      hasBirthDate,
+      hasMotherName,
+      hasCpf,
+      hasIdentityDocument,
+    ].filter(Boolean).length;
 
     if (!hasName) missingLegalName += 1;
     if (!hasBirthDate) missingBirthDate += 1;
@@ -86,7 +88,12 @@ export async function getIndividualDataQualityMetrics(): Promise<IndividualDataQ
     if (hasCpf && !cpfValid) invalidCpf += 1;
     if (!hasIdentityDocument) missingIdentityDocument += 1;
 
-    if (hasName && hasBirthDate && hasMotherName && (cpfValid || hasIdentityDocument)) {
+    if (
+      hasName &&
+      hasBirthDate &&
+      hasMotherName &&
+      (cpfValid || hasIdentityDocument)
+    ) {
       completeCoreIdentity += 1;
     }
 
@@ -103,9 +110,10 @@ export async function getIndividualDataQualityMetrics(): Promise<IndividualDataQ
 
   return {
     totalRecords: records.length,
-    qualityScore: possibleFields === 0
-      ? 0
-      : Math.round((completedFields / possibleFields) * 1000) / 10,
+    qualityScore:
+      possibleFields === 0
+        ? 0
+        : Math.round((completedFields / possibleFields) * 1000) / 10,
     completeCoreIdentity,
     missingLegalName,
     missingBirthDate,

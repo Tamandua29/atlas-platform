@@ -67,7 +67,9 @@ describe("camada operacional de pontos de venda", () => {
       title: "Ponto de venda sinalizado",
       description: "Classificação explícita na fonte; requer validação humana.",
     });
-    expect(JSON.stringify(entity)).not.toContain("Narrativa operacional sensível");
+    expect(JSON.stringify(entity)).not.toContain(
+      "Narrativa operacional sensível",
+    );
   });
 
   it("mantém ocorrência genérica de tráfico fora da camada", async () => {

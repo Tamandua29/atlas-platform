@@ -38,19 +38,27 @@ export async function listOrganizationDirectory(
 ): Promise<OrganizationDirectoryEntry[]> {
   const configuration = getAirtableConfiguration();
   const [organizations, links] = await Promise.all([
-    listAllAirtableRecords<OrganizationFields>(configuration.organizationsTableId, {
-      baseId: configuration.baseId,
-      fields: organizationFields,
-      maxRecords: Math.min(Math.max(limit, 1), 200),
-    }),
-    listAllAirtableRecords<OrganizationalLinkFields>(configuration.organizationalLinksTableId, {
-      baseId: configuration.baseId,
-      fields: linkFields,
-      maxRecords: 500,
-    }),
+    listAllAirtableRecords<OrganizationFields>(
+      configuration.organizationsTableId,
+      {
+        baseId: configuration.baseId,
+        fields: organizationFields,
+        maxRecords: Math.min(Math.max(limit, 1), 200),
+      },
+    ),
+    listAllAirtableRecords<OrganizationalLinkFields>(
+      configuration.organizationalLinksTableId,
+      {
+        baseId: configuration.baseId,
+        fields: linkFields,
+        maxRecords: 500,
+      },
+    ),
   ]);
 
-  const activeLinks = links.filter((record) => record.fields["Registro Ativo"] !== false);
+  const activeLinks = links.filter(
+    (record) => record.fields["Registro Ativo"] !== false,
+  );
 
   return organizations
     .map((organization) => {
@@ -63,7 +71,9 @@ export async function listOrganizationDirectory(
 
       return {
         recordId: organization.id,
-        name: text(organization.fields["Nome da Organização"]) || "Organização não identificada",
+        name:
+          text(organization.fields["Nome da Organização"]) ||
+          "Organização não identificada",
         acronym: text(organization.fields.Sigla) || null,
         organizationType: text(organization.fields.Tipo) || null,
         organizationStatus: text(organization.fields.Situação) || null,

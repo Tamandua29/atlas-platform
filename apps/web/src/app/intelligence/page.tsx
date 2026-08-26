@@ -7,35 +7,40 @@ const modules = [
     href: "/intelligence/search",
     eyebrow: "Consulta transversal",
     title: "Pesquisa unificada",
-    description: "Localize pessoas, organizações, veículos e mandados em uma única consulta protegida.",
+    description:
+      "Localize pessoas, organizações, veículos e mandados em uma única consulta protegida.",
     accent: "border-emerald-400/30 text-emerald-300",
   },
   {
     href: "/intelligence/individuals",
     eyebrow: "Identificação canônica",
     title: "Indivíduos",
-    description: "Diretório protegido de pessoas e acesso às fichas operacionais vinculadas.",
+    description:
+      "Diretório protegido de pessoas e acesso às fichas operacionais vinculadas.",
     accent: "border-cyan-400/30 text-cyan-300",
   },
   {
     href: "/intelligence/organizations",
     eyebrow: "Vínculos explícitos",
     title: "Organizações",
-    description: "Consulta de organizações cadastradas e dos vínculos expressamente registrados na fonte.",
+    description:
+      "Consulta de organizações cadastradas e dos vínculos expressamente registrados na fonte.",
     accent: "border-violet-400/30 text-violet-300",
   },
   {
     href: "/intelligence/vehicles",
     eyebrow: "Ativos relacionados",
     title: "Veículos",
-    description: "Diretório com identificação protegida, situação informada e vínculos autorizados.",
+    description:
+      "Diretório com identificação protegida, situação informada e vínculos autorizados.",
     accent: "border-sky-400/30 text-sky-300",
   },
   {
     href: "/intelligence/warrants",
     eyebrow: "Monitoramento controlado",
     title: "Mandados",
-    description: "Triagem de referências mascaradas sem substituir a consulta oficial de validade.",
+    description:
+      "Triagem de referências mascaradas sem substituir a consulta oficial de validade.",
     accent: "border-amber-400/30 text-amber-300",
   },
 ] as const;
@@ -49,7 +54,9 @@ export default function IntelligencePage() {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
               Atlas Intelligence Platform
             </p>
-            <h1 className="mt-1 text-xl font-semibold">Banco de Inteligência</h1>
+            <h1 className="mt-1 text-xl font-semibold">
+              Banco de Inteligência
+            </h1>
           </div>
           <Link
             href="/identification-dashboard"
@@ -69,35 +76,48 @@ export default function IntelligencePage() {
             Central segura de entidades operacionais
           </h2>
           <p className="mt-4 max-w-4xl text-lg leading-8 text-slate-400">
-            Acesse os diretórios autorizados a partir de uma única visão. As consultas permanecem
-            autenticadas e auditadas, com identificadores sensíveis protegidos.
+            Acesse os diretórios autorizados a partir de uma única visão. As
+            consultas permanecem autenticadas e auditadas, com identificadores
+            sensíveis protegidos.
           </p>
         </section>
 
         <IntelligenceOverviewClient />
 
-        <section className="grid gap-5 md:grid-cols-2" aria-label="Módulos do Banco de Inteligência">
+        <section
+          className="grid gap-5 md:grid-cols-2"
+          aria-label="Módulos do Banco de Inteligência"
+        >
           {modules.map((module) => (
             <Link
               key={module.href}
               href={module.href}
               className={`group rounded-2xl border bg-slate-900/60 p-7 transition hover:-translate-y-0.5 hover:bg-slate-900 ${module.accent}`}
             >
-              <p className="text-xs font-bold uppercase tracking-[0.18em]">{module.eyebrow}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em]">
+                {module.eyebrow}
+              </p>
               <div className="mt-4 flex items-center justify-between gap-4">
-                <h3 className="text-2xl font-semibold text-white">{module.title}</h3>
-                <span aria-hidden="true" className="text-2xl transition group-hover:translate-x-1">
+                <h3 className="text-2xl font-semibold text-white">
+                  {module.title}
+                </h3>
+                <span
+                  aria-hidden="true"
+                  className="text-2xl transition group-hover:translate-x-1"
+                >
                   →
                 </span>
               </div>
-              <p className="mt-3 leading-7 text-slate-400">{module.description}</p>
+              <p className="mt-3 leading-7 text-slate-400">
+                {module.description}
+              </p>
             </Link>
           ))}
         </section>
 
         <section className="rounded-2xl border border-emerald-400/20 bg-emerald-950/10 p-5 text-sm text-emerald-200">
-          Proteção ativa: esta central apenas direciona para consultas autorizadas e não realiza
-          alterações nos registros de origem.
+          Proteção ativa: esta central apenas direciona para consultas
+          autorizadas e não realiza alterações nos registros de origem.
         </section>
       </div>
     </main>

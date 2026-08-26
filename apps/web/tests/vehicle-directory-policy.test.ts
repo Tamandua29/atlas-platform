@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { filterVehicleDirectory, maskVehiclePlate } from "../src/features/intelligence/vehicle-directory-policy";
+import {
+  filterVehicleDirectory,
+  maskVehiclePlate,
+} from "../src/features/intelligence/vehicle-directory-policy";
 
 describe("vehicle directory policy", () => {
   it("mascara a placa antes de expor o valor", () => {
@@ -10,8 +13,20 @@ describe("vehicle directory policy", () => {
 
   it("filtra apenas pelos atributos seguros", () => {
     const vehicles = [
-      { maskedPlate: "ABC•••3", brand: "Toyota", model: "Corolla", color: "Prata", status: "Ativo" },
-      { maskedPlate: "XYZ•••9", brand: "Honda", model: "Civic", color: "Preto", status: "Apreendido" },
+      {
+        maskedPlate: "ABC•••3",
+        brand: "Toyota",
+        model: "Corolla",
+        color: "Prata",
+        status: "Ativo",
+      },
+      {
+        maskedPlate: "XYZ•••9",
+        brand: "Honda",
+        model: "Civic",
+        color: "Preto",
+        status: "Apreendido",
+      },
     ];
 
     expect(filterVehicleDirectory(vehicles, "civic")).toEqual([vehicles[1]]);

@@ -19,8 +19,14 @@ type DecisionPayload = {
   justification?: string;
 };
 
-function isFinalDecision(value: unknown): value is FinalDuplicateReviewDecision {
-  return value === "same-person" || value === "different-people" || value === "inconclusive";
+function isFinalDecision(
+  value: unknown,
+): value is FinalDuplicateReviewDecision {
+  return (
+    value === "same-person" ||
+    value === "different-people" ||
+    value === "inconclusive"
+  );
 }
 
 function errorStatus(error: unknown): number {
@@ -108,7 +114,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         mode: "session-protected-human-decision",
         writesPerformed: 0,
         automaticMergesPerformed: 0,
-        message: error instanceof Error ? error.message : "Erro desconhecido ao registrar a decisão.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao registrar a decisão.",
       },
       { status: errorStatus(error) },
     );

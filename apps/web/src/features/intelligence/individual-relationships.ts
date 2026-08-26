@@ -82,22 +82,27 @@ export async function listRelationshipsForIndividual(
 
       const counterparts = matchesOrigin
         ? destinations.map((counterpartRecordId) => ({
-          counterpartRecordId,
-          direction: "origin" as const,
-        }))
+            counterpartRecordId,
+            direction: "origin" as const,
+          }))
         : origins.map((counterpartRecordId) => ({
-          counterpartRecordId,
-          direction: "destination" as const,
-        }));
+            counterpartRecordId,
+            direction: "destination" as const,
+          }));
 
       return counterparts
-        .filter(({ counterpartRecordId }) => counterpartRecordId !== individualRecordId)
+        .filter(
+          ({ counterpartRecordId }) =>
+            counterpartRecordId !== individualRecordId,
+        )
         .map((counterpart) => ({ record, ...counterpart }));
     });
 
   if (relevant.length === 0) return [];
 
-  const counterpartIds = new Set(relevant.map(({ counterpartRecordId }) => counterpartRecordId));
+  const counterpartIds = new Set(
+    relevant.map(({ counterpartRecordId }) => counterpartRecordId),
+  );
   const individuals = await listAllAirtableRecords<IndividualFields>(
     configuration.individualsTableId,
     {
@@ -120,18 +125,28 @@ export async function listRelationshipsForIndividual(
       return {
         relationshipRecordId: record.id,
         counterpartRecordId,
-        counterpartName: text(counterpart["Nome Completo"]) || "Pessoa não identificada",
+        counterpartName:
+          text(counterpart["Nome Completo"]) || "Pessoa não identificada",
         counterpartAlias: text(counterpart["Vulgo Principal"]) || null,
         direction,
-        relationshipType: text(record.fields["Tipo de Relacionamento"]) || "Vínculo registrado",
+        relationshipType:
+          text(record.fields["Tipo de Relacionamento"]) || "Vínculo registrado",
         confidence: text(record.fields.Confiabilidade) || null,
-        verificationStatus: text(record.fields["Situação da Verificação"]) || null,
+        verificationStatus:
+          text(record.fields["Situação da Verificação"]) || null,
         informationDate: text(record.fields["Data da Informação"]) || null,
-        riskCategory: text(record.fields["Categoria de Risco do Relacionamento"]) || null,
-        informationClassification: text(record.fields["Classificação da Informação"]) || null,
+        riskCategory:
+          text(record.fields["Categoria de Risco do Relacionamento"]) || null,
+        informationClassification:
+          text(record.fields["Classificação da Informação"]) || null,
         sourceRegistered: Boolean(text(record.fields.Fonte)),
       };
     })
-    .filter((relationship): relationship is IndividualRelationship => relationship !== null)
-    .sort((left, right) => left.counterpartName.localeCompare(right.counterpartName, "pt-BR"));
+    .filter(
+      (relationship): relationship is IndividualRelationship =>
+        relationship !== null,
+    )
+    .sort((left, right) =>
+      left.counterpartName.localeCompare(right.counterpartName, "pt-BR"),
+    );
 }

@@ -13,7 +13,11 @@ import {
 describe("áreas operacionais demonstrativas", () => {
   it("mantém um conjunto explícito e exclusivamente sintético", () => {
     expect(DEMO_OPERATIONAL_ZONES).toHaveLength(3);
-    expect(DEMO_OPERATIONAL_ZONES.every((zone) => zone.name.toLowerCase().includes("demonstrativ"))).toBe(true);
+    expect(
+      DEMO_OPERATIONAL_ZONES.every((zone) =>
+        zone.name.toLowerCase().includes("demonstrativ"),
+      ),
+    ).toBe(true);
   });
 
   it("mantém todos os anéis fechados", () => {
@@ -51,21 +55,43 @@ describe("validação de áreas operacionais persistidas", () => {
   it("aceita um Polygon GeoJSON fechado dentro dos limites geográficos", () => {
     const polygon = parseOperationalZonePolygon({
       type: "Polygon",
-      coordinates: [[
-        [-60.1, -3.2],
-        [-60.0, -3.2],
-        [-60.0, -3.1],
-        [-60.1, -3.2],
-      ]],
+      coordinates: [
+        [
+          [-60.1, -3.2],
+          [-60.0, -3.2],
+          [-60.0, -3.1],
+          [-60.1, -3.2],
+        ],
+      ],
     });
 
     expect(polygon).toHaveLength(1);
   });
 
   it("rejeita anel aberto, coordenada inválida e MultiPolygon", () => {
-    expect(parseOperationalZonePolygon([[[-60, -3], [-59, -3], [-59, -2], [-58, -2]]])).toBeNull();
-    expect(parseOperationalZonePolygon([[[-200, -3], [-59, -3], [-59, -2], [-200, -3]]])).toBeNull();
-    expect(parseOperationalZonePolygon({ type: "MultiPolygon", coordinates: [] })).toBeNull();
+    expect(
+      parseOperationalZonePolygon([
+        [
+          [-60, -3],
+          [-59, -3],
+          [-59, -2],
+          [-58, -2],
+        ],
+      ]),
+    ).toBeNull();
+    expect(
+      parseOperationalZonePolygon([
+        [
+          [-200, -3],
+          [-59, -3],
+          [-59, -2],
+          [-200, -3],
+        ],
+      ]),
+    ).toBeNull();
+    expect(
+      parseOperationalZonePolygon({ type: "MultiPolygon", coordinates: [] }),
+    ).toBeNull();
   });
 
   it("normaliza prioridades desconhecidas para o nível seguro", () => {

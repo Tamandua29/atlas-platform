@@ -69,10 +69,10 @@ function coordinate(
   minimum: number,
   maximum: number,
 ): number | null {
-  return typeof value === "number"
-    && Number.isFinite(value)
-    && value >= minimum
-    && value <= maximum
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= minimum &&
+    value <= maximum
     ? value
     : null;
 }
@@ -96,7 +96,8 @@ export async function listAddressesForIndividual(
       neighborhood: text(record.fields.Bairro) || null,
       city: text(record.fields.Município) || null,
       state: text(record.fields.Estado) || null,
-      verificationStatus: text(record.fields["Situação da Verificação"]) || null,
+      verificationStatus:
+        text(record.fields["Situação da Verificação"]) || null,
       source: text(record.fields.Fonte) || null,
       latitude: coordinate(record.fields.Latitude, -90, 90),
       longitude: coordinate(record.fields.Longitude, -180, 180),

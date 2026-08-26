@@ -10,7 +10,8 @@ export function assertDistinctActors(
   actors: Array<{ id: string | null | undefined; label: string }>,
 ): void {
   const present = actors.filter(
-    (actor): actor is { id: string; label: string } => Boolean(actor.id?.trim()),
+    (actor): actor is { id: string; label: string } =>
+      Boolean(actor.id?.trim()),
   );
   const seen = new Map<string, string>();
 
@@ -36,8 +37,8 @@ export function correctionExecutionDisposition(input: {
   if (input.executionStatus === "Aplicada") return "already-completed";
 
   if (
-    input.executionStatus === "Aplicando"
-    || input.executionStatus === "Falhou"
+    input.executionStatus === "Aplicando" ||
+    input.executionStatus === "Falhou"
   ) {
     return input.afterHash && input.currentHash === input.afterHash
       ? "reconcile"
@@ -60,15 +61,18 @@ export function reversalExecutionDisposition(input: {
   if (input.reversalStatus === "Revertida") return "already-completed";
 
   if (
-    input.reversalStatus !== "Aprovada"
-    && input.reversalStatus !== "Revertendo"
-    && input.reversalStatus !== "Falhou"
-  ) return "blocked-state";
+    input.reversalStatus !== "Aprovada" &&
+    input.reversalStatus !== "Revertendo" &&
+    input.reversalStatus !== "Falhou"
+  )
+    return "blocked-state";
 
   if (
-    (input.reversalStatus === "Revertendo" || input.reversalStatus === "Falhou")
-    && input.currentHash === input.revertedHash
-  ) return "reconcile";
+    (input.reversalStatus === "Revertendo" ||
+      input.reversalStatus === "Falhou") &&
+    input.currentHash === input.revertedHash
+  )
+    return "reconcile";
 
   if (!input.appliedHash || input.currentHash !== input.appliedHash) {
     return "blocked-version";

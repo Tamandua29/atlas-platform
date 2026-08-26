@@ -47,20 +47,24 @@ describe("AuditEntry", () => {
     "accessToken",
     "sessionSecret",
   ])("rejeita metadado sensível: %s", (key) => {
-    expect(() => AuditEntry.create({
-      action: "individuals.preview",
-      outcome: "success",
-      occurredAt: new Date(),
-      metadata: { [key]: "valor-protegido" },
-    })).toThrow(ValidationError);
+    expect(() =>
+      AuditEntry.create({
+        action: "individuals.preview",
+        outcome: "success",
+        occurredAt: new Date(),
+        metadata: { [key]: "valor-protegido" },
+      }),
+    ).toThrow(ValidationError);
   });
 
   it("rejeita contagem negativa", () => {
-    expect(() => AuditEntry.create({
-      action: "individuals.preview",
-      outcome: "failure",
-      occurredAt: new Date(),
-      failureCount: -1,
-    })).toThrow(ValidationError);
+    expect(() =>
+      AuditEntry.create({
+        action: "individuals.preview",
+        outcome: "failure",
+        occurredAt: new Date(),
+        failureCount: -1,
+      }),
+    ).toThrow(ValidationError);
   });
 });

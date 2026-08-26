@@ -1,12 +1,6 @@
-import type {
-  Feature,
-  FeatureCollection,
-  Polygon,
-} from "geojson";
+import type { Feature, FeatureCollection, Polygon } from "geojson";
 
-import {
-  OPERATIONAL_ZONE_CONFIG,
-} from "./operational-map.zones";
+import { OPERATIONAL_ZONE_CONFIG } from "./operational-map.zones";
 
 import type {
   OperationalCoordinates,
@@ -36,11 +30,10 @@ export type OperationalZoneFeature = Feature<
   OperationalZoneGeoJSONProperties
 >;
 
-export type OperationalZoneFeatureCollection =
-  FeatureCollection<
-    Polygon,
-    OperationalZoneGeoJSONProperties
-  >;
+export type OperationalZoneFeatureCollection = FeatureCollection<
+  Polygon,
+  OperationalZoneGeoJSONProperties
+>;
 
 export type OperationalBounds = {
   southwest: OperationalCoordinates;
@@ -109,10 +102,7 @@ export function findOperationalZoneByFeatureId(
 
   const normalizedFeatureId = String(featureId);
 
-  return (
-    zones.find((zone) => zone.id === normalizedFeatureId) ??
-    null
-  );
+  return zones.find((zone) => zone.id === normalizedFeatureId) ?? null;
 }
 
 export function calculateOperationalZoneBounds(
@@ -130,25 +120,13 @@ export function calculateOperationalZoneBounds(
   let maximumLatitude = Number.NEGATIVE_INFINITY;
 
   for (const [longitude, latitude] of points) {
-    minimumLongitude = Math.min(
-      minimumLongitude,
-      longitude,
-    );
+    minimumLongitude = Math.min(minimumLongitude, longitude);
 
-    minimumLatitude = Math.min(
-      minimumLatitude,
-      latitude,
-    );
+    minimumLatitude = Math.min(minimumLatitude, latitude);
 
-    maximumLongitude = Math.max(
-      maximumLongitude,
-      longitude,
-    );
+    maximumLongitude = Math.max(maximumLongitude, longitude);
 
-    maximumLatitude = Math.max(
-      maximumLatitude,
-      latitude,
-    );
+    maximumLatitude = Math.max(maximumLatitude, latitude);
   }
 
   if (
@@ -161,15 +139,9 @@ export function calculateOperationalZoneBounds(
   }
 
   return {
-    southwest: [
-      minimumLongitude,
-      minimumLatitude,
-    ],
+    southwest: [minimumLongitude, minimumLatitude],
 
-    northeast: [
-      maximumLongitude,
-      maximumLatitude,
-    ],
+    northeast: [maximumLongitude, maximumLatitude],
   };
 }
 
@@ -178,11 +150,7 @@ export function calculateOperationalZonesBounds(
 ): OperationalBounds | null {
   const zoneBounds = zones
     .map(calculateOperationalZoneBounds)
-    .filter(
-      (
-        bounds,
-      ): bounds is OperationalBounds => bounds !== null,
-    );
+    .filter((bounds): bounds is OperationalBounds => bounds !== null);
 
   if (zoneBounds.length === 0) {
     return null;
@@ -194,36 +162,18 @@ export function calculateOperationalZonesBounds(
   let maximumLatitude = Number.NEGATIVE_INFINITY;
 
   for (const bounds of zoneBounds) {
-    minimumLongitude = Math.min(
-      minimumLongitude,
-      bounds.southwest[0],
-    );
+    minimumLongitude = Math.min(minimumLongitude, bounds.southwest[0]);
 
-    minimumLatitude = Math.min(
-      minimumLatitude,
-      bounds.southwest[1],
-    );
+    minimumLatitude = Math.min(minimumLatitude, bounds.southwest[1]);
 
-    maximumLongitude = Math.max(
-      maximumLongitude,
-      bounds.northeast[0],
-    );
+    maximumLongitude = Math.max(maximumLongitude, bounds.northeast[0]);
 
-    maximumLatitude = Math.max(
-      maximumLatitude,
-      bounds.northeast[1],
-    );
+    maximumLatitude = Math.max(maximumLatitude, bounds.northeast[1]);
   }
 
   return {
-    southwest: [
-      minimumLongitude,
-      minimumLatitude,
-    ],
+    southwest: [minimumLongitude, minimumLatitude],
 
-    northeast: [
-      maximumLongitude,
-      maximumLatitude,
-    ],
+    northeast: [maximumLongitude, maximumLatitude],
   };
 }

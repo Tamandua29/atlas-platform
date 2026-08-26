@@ -34,21 +34,26 @@ export class LoginAttemptGuard {
     this.cleanup(now);
     const state = this.attempts.get(key);
     if (!state || state.lockedUntil <= now) {
-      if (state?.lockedUntil && state.lockedUntil <= now) this.attempts.delete(key);
+      if (state?.lockedUntil && state.lockedUntil <= now)
+        this.attempts.delete(key);
       return { allowed: true, retryAfterSeconds: 0 };
     }
     return {
       allowed: false,
-      retryAfterSeconds: Math.max(1, Math.ceil((state.lockedUntil - now) / 1000)),
+      retryAfterSeconds: Math.max(
+        1,
+        Math.ceil((state.lockedUntil - now) / 1000),
+      ),
     };
   }
 
   registerFailure(key: string): { locked: boolean; retryAfterSeconds: number } {
     const now = this.now();
     const current = this.attempts.get(key);
-    const state: AttemptState = !current || now - current.windowStartedAt >= WINDOW_MS
-      ? { failures: 0, windowStartedAt: now, lockedUntil: 0, lastSeenAt: now }
-      : current;
+    const state: AttemptState =
+      !current || now - current.windowStartedAt >= WINDOW_MS
+        ? { failures: 0, windowStartedAt: now, lockedUntil: 0, lastSeenAt: now }
+        : current;
 
     state.failures += 1;
     state.lastSeenAt = now;
@@ -56,9 +61,10 @@ export class LoginAttemptGuard {
     this.attempts.set(key, state);
     return {
       locked: state.lockedUntil > now,
-      retryAfterSeconds: state.lockedUntil > now
-        ? Math.ceil((state.lockedUntil - now) / 1000)
-        : 0,
+      retryAfterSeconds:
+        state.lockedUntil > now
+          ? Math.ceil((state.lockedUntil - now) / 1000)
+          : 0,
     };
   }
 

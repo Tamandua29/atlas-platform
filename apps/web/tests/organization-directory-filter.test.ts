@@ -24,12 +24,20 @@ const organizations: FilterableOrganization[] = [
 
 describe("filtros do diretório de organizações", () => {
   it("busca nome e sigla sem depender de acentuação", () => {
-    expect(filterOrganizationDirectory(organizations, "aguia", "all")).toEqual([organizations[0]]);
-    expect(filterOrganizationDirectory(organizations, "oa", "all")).toEqual([organizations[0]]);
+    expect(filterOrganizationDirectory(organizations, "aguia", "all")).toEqual([
+      organizations[0],
+    ]);
+    expect(filterOrganizationDirectory(organizations, "oa", "all")).toEqual([
+      organizations[0],
+    ]);
   });
 
   it("separa organizações com vínculos explicitamente registrados", () => {
-    expect(filterOrganizationDirectory(organizations, "", "linked")).toEqual([organizations[0]]);
-    expect(filterOrganizationDirectory(organizations, "", "unlinked")).toEqual([organizations[1]]);
+    expect(filterOrganizationDirectory(organizations, "", "linked")).toEqual([
+      organizations[0],
+    ]);
+    expect(filterOrganizationDirectory(organizations, "", "unlinked")).toEqual([
+      organizations[1],
+    ]);
   });
 });

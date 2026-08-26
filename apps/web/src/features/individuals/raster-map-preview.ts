@@ -16,10 +16,7 @@ export function buildRasterMapTiles(
   const normalizedLongitude = ((longitude + 180) / 360) * scale;
   const latitudeRadians = (latitude * Math.PI) / 180;
   const normalizedLatitude =
-    ((1 -
-      Math.asinh(Math.tan(latitudeRadians)) / Math.PI) /
-      2) *
-    scale;
+    ((1 - Math.asinh(Math.tan(latitudeRadians)) / Math.PI) / 2) * scale;
   const centerX = Math.floor(normalizedLongitude);
   const centerY = Math.floor(normalizedLatitude);
   const offsetX = (normalizedLongitude - centerX) * TILE_SIZE;

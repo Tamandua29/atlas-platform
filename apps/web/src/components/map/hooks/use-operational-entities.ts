@@ -8,9 +8,7 @@ import {
 } from "../providers/operational-entities-provider";
 
 export function useOperationalEntities(): OperationalEntitiesContextValue {
-  const context = useContext(
-    OperationalEntitiesContext,
-  );
+  const context = useContext(OperationalEntitiesContext);
 
   if (!context) {
     throw new Error(

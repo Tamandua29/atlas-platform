@@ -36,17 +36,13 @@ export function EntityDetailsPanel({
   onClose,
   onCenter,
 }: EntityDetailsPanelProps) {
-  const entityConfiguration =
-    OPERATIONAL_ENTITY_CONFIG[entity.type];
+  const entityConfiguration = OPERATIONAL_ENTITY_CONFIG[entity.type];
 
   const priority = entity.priority ?? "normal";
 
-  const priorityConfiguration =
-    OPERATIONAL_PRIORITY_CONFIG[priority];
+  const priorityConfiguration = OPERATIONAL_PRIORITY_CONFIG[priority];
 
-  const formattedDate = formatEntityDate(
-    entity.createdAt,
-  );
+  const formattedDate = formatEntityDate(entity.createdAt);
 
   const profileHref = getOperationalEntityProfileHref(entity);
 
@@ -55,8 +51,7 @@ export function EntityDetailsPanel({
       <div
         className="h-1.5 w-full"
         style={{
-          backgroundColor:
-            entityConfiguration.color,
+          backgroundColor: entityConfiguration.color,
         }}
       />
 
@@ -91,14 +86,11 @@ export function EntityDetailsPanel({
           <span
             className="rounded-full px-3 py-1 text-[11px] font-semibold"
             style={{
-              color:
-                priorityConfiguration.color,
-              backgroundColor:
-                priorityConfiguration.backgroundColor,
+              color: priorityConfiguration.color,
+              backgroundColor: priorityConfiguration.backgroundColor,
             }}
           >
-            Prioridade{" "}
-            {priorityConfiguration.label}
+            Prioridade {priorityConfiguration.label}
           </span>
 
           <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-300">
@@ -164,8 +156,8 @@ export function EntityDetailsPanel({
             </dd>
 
             <p className="mt-2 text-[11px] leading-5 text-slate-400">
-              Contagem restrita aos registros visíveis ligados explicitamente
-              na fonte. Proximidade geográfica não cria vínculo.
+              Contagem restrita aos registros visíveis ligados explicitamente na
+              fonte. Proximidade geográfica não cria vínculo.
             </p>
           </div>
         </dl>

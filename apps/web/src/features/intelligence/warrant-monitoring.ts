@@ -1,4 +1,5 @@
-export type WarrantAttention = "active" | "expiring" | "expired" | "closed" | "unknown";
+export type WarrantAttention =
+  "active" | "expiring" | "expired" | "closed" | "unknown";
 
 function normalize(value: string | null): string {
   return (value || "")
@@ -20,7 +21,8 @@ export function classifyWarrantAttention(
   now = new Date(),
 ): WarrantAttention {
   const normalizedStatus = normalize(status);
-  if (/cumprid|revog|cancel|encerr|baixad/.test(normalizedStatus)) return "closed";
+  if (/cumprid|revog|cancel|encerr|baixad/.test(normalizedStatus))
+    return "closed";
   if (/expir|vencid/.test(normalizedStatus)) return "expired";
 
   const expiry = asDate(expiresAt);

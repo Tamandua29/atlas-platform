@@ -1,9 +1,6 @@
 import "server-only";
 
-import {
-  isStructurallyValidCpf,
-  normalizeCpf,
-} from "@atlas/kernel";
+import { isStructurallyValidCpf, normalizeCpf } from "@atlas/kernel";
 
 import {
   listAllAirtableRecords,
@@ -14,11 +11,7 @@ import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
 const REVIEW_TABLE_ID = "tblgtBw4wOvG4utaS";
 
 type ProposalKey =
-  | "legalName"
-  | "birthDate"
-  | "motherName"
-  | "cpf"
-  | "identityDocument";
+  "legalName" | "birthDate" | "motherName" | "cpf" | "identityDocument";
 
 export type ProposalValues = Partial<Record<ProposalKey, string>>;
 
@@ -114,7 +107,8 @@ function allowedFieldsFromIssues(issues: string[]): ProposalKey[] {
     if (issue === "Nome completo ausente") allowed.add("legalName");
     if (issue === "Data de nascimento ausente") allowed.add("birthDate");
     if (issue === "Filiação materna ausente") allowed.add("motherName");
-    if (issue === "CPF ausente" || issue === "CPF estruturalmente inválido") allowed.add("cpf");
+    if (issue === "CPF ausente" || issue === "CPF estruturalmente inválido")
+      allowed.add("cpf");
     if (issue === "RG ausente") allowed.add("identityDocument");
   }
   return Array.from(allowed);
@@ -123,16 +117,26 @@ function allowedFieldsFromIssues(issues: string[]): ProposalKey[] {
 function validIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
 }
 
-function validateProposal(values: ProposalValues, allowed: ProposalKey[]): ProposalValues {
+function validateProposal(
+  values: ProposalValues,
+  allowed: ProposalKey[],
+): ProposalValues {
   const result: ProposalValues = {};
-  for (const [key, rawValue] of Object.entries(values) as Array<[ProposalKey, string]>) {
+  for (const [key, rawValue] of Object.entries(values) as Array<
+    [ProposalKey, string]
+  >) {
     if (!allowed.includes(key)) {
-      throw new Error("A proposta contém um campo que não pertence às pendências desta solicitação.");
+      throw new Error(
+        "A proposta contém um campo que não pertence às pendências desta solicitação.",
+      );
     }
-    if (typeof rawValue !== "string") throw new Error("Todos os valores propostos devem ser textuais.");
+    if (typeof rawValue !== "string")
+      throw new Error("Todos os valores propostos devem ser textuais.");
     const value = rawValue.trim();
     if (!value) continue;
 
@@ -140,7 +144,9 @@ function validateProposal(values: ProposalValues, allowed: ProposalKey[]): Propo
       throw new Error("Nome e filiação devem possuir pelo menos 3 caracteres.");
     }
     if (key === "birthDate" && !validIsoDate(value)) {
-      throw new Error("A data de nascimento deve estar no formato AAAA-MM-DD e ser válida.");
+      throw new Error(
+        "A data de nascimento deve estar no formato AAAA-MM-DD e ser válida.",
+      );
     }
     if (key === "cpf") {
       const cpf = normalizeCpf(value);
@@ -151,7 +157,9 @@ function validateProposal(values: ProposalValues, allowed: ProposalKey[]): Propo
       continue;
     }
     if (key === "identityDocument" && (value.length < 3 || value.length > 30)) {
-      throw new Error("O documento de identidade deve possuir entre 3 e 30 caracteres.");
+      throw new Error(
+        "O documento de identidade deve possuir entre 3 e 30 caracteres.",
+      );
     }
     result[key] = value;
   }
@@ -218,14 +226,22 @@ async function loadContext(reviewId: string) {
   const review = reviews[0];
   const sourceRecordId = review?.fields.Indivíduo?.[0];
   if (!review || !sourceRecordId) {
-    throw new Error("A solicitação ou o vínculo com o cadastro não foi encontrado.");
+    throw new Error(
+      "A solicitação ou o vínculo com o cadastro não foi encontrado.",
+    );
   }
 
   const individuals = await listAllAirtableRecords<IndividualFields>(
     configuration.individualsTableId,
     {
       baseId: configuration.individualsPreviewBaseId,
-      fields: ["Nome Completo", "Data de Nascimento", "Mãe", "CPF", "Registro Geral"],
+      fields: [
+        "Nome Completo",
+        "Data de Nascimento",
+        "Mãe",
+        "CPF",
+        "Registro Geral",
+      ],
       filterByFormula: `RECORD_ID()='${sourceRecordId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
     },
@@ -233,10 +249,11 @@ async function loadContext(reviewId: string) {
   const individual = individuals[0];
   if (!individual) throw new Error("O cadastro vinculado não foi encontrado.");
 
-  const issues = review.fields["Campos para Saneamento"]
-    ?.split(/\r?\n/)
-    .map((value) => value.trim())
-    .filter(Boolean) ?? [];
+  const issues =
+    review.fields["Campos para Saneamento"]
+      ?.split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean) ?? [];
 
   return {
     configuration,
@@ -272,19 +289,25 @@ export async function getProtectedCorrectionProposalContext(
     proposerId: context.review.fields["Proponente Técnico"]?.trim() || null,
     approverId: context.review.fields["Aprovador Técnico"]?.trim() || null,
     decisionReason:
-      context.review.fields["Justificativa da Decisão da Proposta"]?.trim() || null,
+      context.review.fields["Justificativa da Decisão da Proposta"]?.trim() ||
+      null,
     decidedAt: context.review.fields["Proposta Decidida em"] ?? null,
     executionStatus: context.review.fields["Situação da Execução"] ?? null,
     executorId: context.review.fields["Executor Técnico"]?.trim() || null,
     executedAt: context.review.fields["Executada em"] ?? null,
     reversalStatus: context.review.fields["Situação da Reversão"] ?? null,
-    reversalRequesterId: context.review.fields["Solicitante da Reversão"]?.trim() || null,
+    reversalRequesterId:
+      context.review.fields["Solicitante da Reversão"]?.trim() || null,
     reversalReason: context.review.fields["Motivo da Reversão"]?.trim() || null,
-    reversalRequestedAt: context.review.fields["Reversão Solicitada em"] ?? null,
-    reversalApproverId: context.review.fields["Aprovador da Reversão"]?.trim() || null,
-    reversalDecisionReason: context.review.fields["Justificativa da Reversão"]?.trim() || null,
+    reversalRequestedAt:
+      context.review.fields["Reversão Solicitada em"] ?? null,
+    reversalApproverId:
+      context.review.fields["Aprovador da Reversão"]?.trim() || null,
+    reversalDecisionReason:
+      context.review.fields["Justificativa da Reversão"]?.trim() || null,
     reversalDecidedAt: context.review.fields["Reversão Decidida em"] ?? null,
-    reversalExecutorId: context.review.fields["Executor da Reversão"]?.trim() || null,
+    reversalExecutorId:
+      context.review.fields["Executor da Reversão"]?.trim() || null,
     revertedAt: context.review.fields["Revertida em"] ?? null,
   };
 }
@@ -307,19 +330,24 @@ export async function decideCorrectionProposal(input: {
     throw new Error("A proposta não possui proponente identificado.");
   }
   if (proposerId === input.approverId) {
-    throw new Error("A mesma identidade não pode elaborar e decidir a proposta.");
+    throw new Error(
+      "A mesma identidade não pode elaborar e decidir a proposta.",
+    );
   }
 
   const reason = input.reason.trim();
   if (reason.length < 10 || reason.length > 1000) {
-    throw new Error("A justificativa da decisão deve possuir entre 10 e 1000 caracteres.");
+    throw new Error(
+      "A justificativa da decisão deve possuir entre 10 e 1000 caracteres.",
+    );
   }
 
   await updateAirtableRecord<ProposalReviewFields>(
     REVIEW_TABLE_ID,
     context.review.id,
     {
-      "Situação da Proposta": input.decision === "approve" ? "Aprovada" : "Rejeitada",
+      "Situação da Proposta":
+        input.decision === "approve" ? "Aprovada" : "Rejeitada",
       "Aprovador Técnico": input.approverId,
       "Justificativa da Decisão da Proposta": reason,
       "Proposta Decidida em": input.decidedAt.toISOString(),
@@ -338,7 +366,9 @@ export async function saveCorrectionProposal(input: {
 }): Promise<ProtectedCorrectionProposalContext> {
   const context = await loadContext(input.reviewId);
   if (context.review.fields.Situação !== "Concluída") {
-    throw new Error("O tratamento deve estar concluído antes da elaboração da proposta.");
+    throw new Error(
+      "O tratamento deve estar concluído antes da elaboração da proposta.",
+    );
   }
   const proposalStatus = context.review.fields["Situação da Proposta"];
   if (proposalStatus && proposalStatus !== "Rejeitada") {

@@ -1,8 +1,4 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { Result } from "../src/result/result";
 
@@ -16,9 +12,7 @@ describe("Result", () => {
   });
 
   it("deve criar um resultado de falha", () => {
-    const error = new Error(
-      "Falha de teste.",
-    );
+    const error = new Error("Falha de teste.");
 
     const result = Result.fail(error);
 
@@ -28,49 +22,32 @@ describe("Result", () => {
   });
 
   it("deve transformar um resultado de sucesso", () => {
-    const result = Result.ok(10).map(
-      (value) => value * 2,
-    );
+    const result = Result.ok(10).map((value) => value * 2);
 
     expect(result.isSuccess).toBe(true);
     expect(result.value).toBe(20);
   });
 
   it("deve preservar uma falha durante map", () => {
-    const error = new Error(
-      "Falha original.",
-    );
+    const error = new Error("Falha original.");
 
-    const result = Result.fail<
-      number,
-      Error
-    >(error).map(
-      (value) => value * 2,
-    );
+    const result = Result.fail<number, Error>(error).map((value) => value * 2);
 
     expect(result.isFailure).toBe(true);
     expect(result.error).toBe(error);
   });
 
   it("deve retornar um valor alternativo", () => {
-    const result = Result.fail<
-      string,
-      Error
-    >(
-      new Error("Falha."),
-    );
+    const result = Result.fail<string, Error>(new Error("Falha."));
 
-    expect(
-      result.getOrElse("fallback"),
-    ).toBe("fallback");
+    expect(result.getOrElse("fallback")).toBe("fallback");
   });
 
   it("deve executar o handler de sucesso", () => {
     const result = Result.ok(10);
 
     const message = result.match({
-      success: (value) =>
-        `Valor: ${value}`,
+      success: (value) => `Valor: ${value}`,
       failure: () => "Falha",
     });
 
@@ -78,22 +55,13 @@ describe("Result", () => {
   });
 
   it("deve executar o handler de falha", () => {
-    const result = Result.fail<
-      number,
-      Error
-    >(
-      new Error("Erro controlado"),
-    );
+    const result = Result.fail<number, Error>(new Error("Erro controlado"));
 
     const message = result.match({
-      success: (value) =>
-        `Valor: ${value}`,
-      failure: (error) =>
-        error.message,
+      success: (value) => `Valor: ${value}`,
+      failure: (error) => error.message,
     });
 
-    expect(message).toBe(
-      "Erro controlado",
-    );
+    expect(message).toBe("Erro controlado");
   });
 });

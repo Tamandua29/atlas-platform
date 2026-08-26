@@ -12,8 +12,11 @@ export const dynamic = "force-dynamic";
 
 function parsePriority(value: string | null): QualityPriority | "all" {
   if (!value || value === "all") return "all";
-  if (value === "critical" || value === "high" || value === "medium") return value;
-  throw new ValidationError("A prioridade deve ser critical, high, medium ou all.");
+  if (value === "critical" || value === "high" || value === "medium")
+    return value;
+  throw new ValidationError(
+    "A prioridade deve ser critical, high, medium ou all.",
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -24,11 +27,14 @@ export async function GET(request: NextRequest) {
   const correlationId = crypto.randomUUID();
 
   try {
-    const priority = parsePriority(request.nextUrl.searchParams.get("priority"));
+    const priority = parsePriority(
+      request.nextUrl.searchParams.get("priority"),
+    );
     const allItems = await listSafeIndividualQualityQueue();
-    const items = priority === "all"
-      ? allItems
-      : allItems.filter((item) => item.priority === priority);
+    const items =
+      priority === "all"
+        ? allItems
+        : allItems.filter((item) => item.priority === priority);
 
     const audit = AuditEntry.create({
       action: "individuals.data-quality.queue.list",

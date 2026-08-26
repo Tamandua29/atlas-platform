@@ -5,13 +5,11 @@ import { NextResponse } from "next/server";
 import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { previewDuplicateCandidatesFromAirtable } from "@/features/individuals/duplicate-candidates-preview";
 
-export const dynamic =
-  "force-dynamic";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const candidates =
-      await previewDuplicateCandidatesFromAirtable();
+    const candidates = await previewDuplicateCandidatesFromAirtable();
 
     const audit = AuditEntry.create({
       action: "individuals.duplicate-candidates.preview",
@@ -24,28 +22,19 @@ export async function GET() {
       },
     });
 
-    const auditPersisted =
-      await persistAuditSafely(
-        audit,
-      );
+    const auditPersisted = await persistAuditSafely(audit);
 
     return NextResponse.json({
       success: true,
       auditPersisted,
-      correlationId:
-        audit.correlationId,
-      mode:
-        "read-only-human-review",
+      correlationId: audit.correlationId,
+      mode: "read-only-human-review",
       count: candidates.length,
       candidates,
-      generatedAt:
-        new Date().toISOString(),
+      generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error(
-      "Falha ao analisar candidatos a duplicidade:",
-      error,
-    );
+    console.error("Falha ao analisar candidatos a duplicidade:", error);
 
     const audit = AuditEntry.create({
       action: "individuals.duplicate-candidates.preview",
@@ -58,19 +47,14 @@ export async function GET() {
       },
     });
 
-    const auditPersisted =
-      await persistAuditSafely(
-        audit,
-      );
+    const auditPersisted = await persistAuditSafely(audit);
 
     return NextResponse.json(
       {
         success: false,
         auditPersisted,
-        correlationId:
-          audit.correlationId,
-        mode:
-          "read-only-human-review",
+        correlationId: audit.correlationId,
+        mode: "read-only-human-review",
         count: 0,
         candidates: [],
         message:

@@ -16,11 +16,7 @@ const REVIEW_TABLE_ID = "tblgtBw4wOvG4utaS";
 const CONFIRMATION_PHRASE = "APLICAR CORREÇÃO";
 
 type ProposalKey =
-  | "legalName"
-  | "birthDate"
-  | "motherName"
-  | "cpf"
-  | "identityDocument";
+  "legalName" | "birthDate" | "motherName" | "cpf" | "identityDocument";
 
 type ProposalValues = Partial<Record<ProposalKey, string>>;
 
@@ -86,7 +82,8 @@ function allowedProposalKeys(issues: string[]): ProposalKey[] {
     if (issue === "Nome completo ausente") allowed.add("legalName");
     if (issue === "Data de nascimento ausente") allowed.add("birthDate");
     if (issue === "Filiação materna ausente") allowed.add("motherName");
-    if (issue === "CPF ausente" || issue === "CPF estruturalmente inválido") allowed.add("cpf");
+    if (issue === "CPF ausente" || issue === "CPF estruturalmente inválido")
+      allowed.add("cpf");
     if (issue === "RG ausente") allowed.add("identityDocument");
   }
   return Array.from(allowed);
@@ -95,11 +92,17 @@ function allowedProposalKeys(issues: string[]): ProposalKey[] {
 function validIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
 }
 
-function parseProposal(raw: string | undefined, issues: string[]): ProposalValues {
-  if (!raw) throw new Error("A proposta aprovada não possui valores estruturados.");
+function parseProposal(
+  raw: string | undefined,
+  issues: string[],
+): ProposalValues {
+  if (!raw)
+    throw new Error("A proposta aprovada não possui valores estruturados.");
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("A proposta aprovada possui formato inválido.");
@@ -108,31 +111,48 @@ function parseProposal(raw: string | undefined, issues: string[]): ProposalValue
   const allowed = allowedProposalKeys(issues);
   const result: ProposalValues = {};
   for (const [key, value] of Object.entries(parsed)) {
-    if (!allowed.includes(key as ProposalKey) || typeof value !== "string" || !value.trim()) {
+    if (
+      !allowed.includes(key as ProposalKey) ||
+      typeof value !== "string" ||
+      !value.trim()
+    ) {
       throw new Error("A proposta aprovada contém campo ou valor inválido.");
     }
     const proposalKey = key as ProposalKey;
     const normalized = value.trim();
-    if ((proposalKey === "legalName" || proposalKey === "motherName") && normalized.length < 3) {
+    if (
+      (proposalKey === "legalName" || proposalKey === "motherName") &&
+      normalized.length < 3
+    ) {
       throw new Error("A proposta aprovada contém nome ou filiação inválida.");
     }
     if (proposalKey === "birthDate" && !validIsoDate(normalized)) {
-      throw new Error("A proposta aprovada contém data de nascimento inválida.");
+      throw new Error(
+        "A proposta aprovada contém data de nascimento inválida.",
+      );
     }
     if (proposalKey === "cpf") {
       const cpf = normalizeCpf(normalized);
       if (!cpf || !isStructurallyValidCpf(cpf)) {
-        throw new Error("A proposta aprovada contém CPF estruturalmente inválido.");
+        throw new Error(
+          "A proposta aprovada contém CPF estruturalmente inválido.",
+        );
       }
       result.cpf = cpf;
       continue;
     }
-    if (proposalKey === "identityDocument" && (normalized.length < 3 || normalized.length > 30)) {
-      throw new Error("A proposta aprovada contém documento de identidade inválido.");
+    if (
+      proposalKey === "identityDocument" &&
+      (normalized.length < 3 || normalized.length > 30)
+    ) {
+      throw new Error(
+        "A proposta aprovada contém documento de identidade inválido.",
+      );
     }
     result[proposalKey] = normalized;
   }
-  if (Object.keys(result).length === 0) throw new Error("A proposta aprovada está vazia.");
+  if (Object.keys(result).length === 0)
+    throw new Error("A proposta aprovada está vazia.");
   return result;
 }
 
@@ -146,7 +166,9 @@ function applyProposal(
     ...(proposal.birthDate ? { "Data de Nascimento": proposal.birthDate } : {}),
     ...(proposal.motherName ? { Mãe: proposal.motherName } : {}),
     ...(proposal.cpf ? { CPF: proposal.cpf } : {}),
-    ...(proposal.identityDocument ? { "Registro Geral": proposal.identityDocument } : {}),
+    ...(proposal.identityDocument
+      ? { "Registro Geral": proposal.identityDocument }
+      : {}),
   };
 }
 
@@ -156,7 +178,9 @@ function proposalPatch(proposal: ProposalValues): Partial<IndividualFields> {
     ...(proposal.birthDate ? { "Data de Nascimento": proposal.birthDate } : {}),
     ...(proposal.motherName ? { Mãe: proposal.motherName } : {}),
     ...(proposal.cpf ? { CPF: proposal.cpf } : {}),
-    ...(proposal.identityDocument ? { "Registro Geral": proposal.identityDocument } : {}),
+    ...(proposal.identityDocument
+      ? { "Registro Geral": proposal.identityDocument }
+      : {}),
   };
 }
 
@@ -190,14 +214,22 @@ async function loadExecutionContext(reviewId: string) {
   const review = reviews[0];
   const sourceRecordId = review?.fields.Indivíduo?.[0];
   if (!review || !sourceRecordId) {
-    throw new Error("A revisão aprovada ou o cadastro vinculado não foi encontrado.");
+    throw new Error(
+      "A revisão aprovada ou o cadastro vinculado não foi encontrado.",
+    );
   }
 
   const individuals = await listAllAirtableRecords<IndividualFields>(
     configuration.individualsTableId,
     {
       baseId: configuration.individualsPreviewBaseId,
-      fields: ["Nome Completo", "Data de Nascimento", "Mãe", "CPF", "Registro Geral"],
+      fields: [
+        "Nome Completo",
+        "Data de Nascimento",
+        "Mãe",
+        "CPF",
+        "Registro Geral",
+      ],
       filterByFormula: `RECORD_ID()='${sourceRecordId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
     },
@@ -246,11 +278,15 @@ export async function executeApprovedCorrection(input: {
   executedAt: Date;
 }): Promise<CorrectionExecutionResult> {
   if (input.confirmation.trim() !== CONFIRMATION_PHRASE) {
-    throw new Error(`Digite exatamente “${CONFIRMATION_PHRASE}” para confirmar a execução.`);
+    throw new Error(
+      `Digite exatamente “${CONFIRMATION_PHRASE}” para confirmar a execução.`,
+    );
   }
   const note = input.note.trim();
   if (note.length < 10 || note.length > 1000) {
-    throw new Error("A nota da execução deve possuir entre 10 e 1000 caracteres.");
+    throw new Error(
+      "A nota da execução deve possuir entre 10 e 1000 caracteres.",
+    );
   }
 
   const context = await loadExecutionContext(input.reviewId);
@@ -258,7 +294,9 @@ export async function executeApprovedCorrection(input: {
   const proposerId = fields["Proponente Técnico"]?.trim();
   const approverId = fields["Aprovador Técnico"]?.trim();
   if (!proposerId || !approverId) {
-    throw new Error("A proposta não possui segregação completa entre proponente e aprovador.");
+    throw new Error(
+      "A proposta não possui segregação completa entre proponente e aprovador.",
+    );
   }
   assertDistinctActors([
     { id: proposerId, label: "proponente" },
@@ -277,10 +315,11 @@ export async function executeApprovedCorrection(input: {
     };
   }
 
-  const issues = fields["Campos para Saneamento"]
-    ?.split(/\r?\n/)
-    .map((value) => value.trim())
-    .filter(Boolean) ?? [];
+  const issues =
+    fields["Campos para Saneamento"]
+      ?.split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean) ?? [];
   const proposal = parseProposal(fields["Proposta de Correção"], issues);
   const currentHash = await hashFields(context.individual.fields);
   const expectedSourceHash = fields["Hash da Versão de Origem"];
@@ -302,13 +341,17 @@ export async function executeApprovedCorrection(input: {
     });
   }
   if (disposition === "blocked-interrupted") {
-    throw new Error("Existe uma execução interrompida que exige reconciliação técnica antes de nova tentativa.");
+    throw new Error(
+      "Existe uma execução interrompida que exige reconciliação técnica antes de nova tentativa.",
+    );
   }
   if (disposition === "blocked-state") {
     throw new Error("Somente propostas aprovadas podem ser executadas.");
   }
   if (disposition === "blocked-version") {
-    throw new Error("O cadastro mudou após a proposta. A execução foi bloqueada por conflito de versão.");
+    throw new Error(
+      "O cadastro mudou após a proposta. A execução foi bloqueada por conflito de versão.",
+    );
   }
 
   const after = applyProposal(context.individual.fields, proposal);
@@ -320,7 +363,9 @@ export async function executeApprovedCorrection(input: {
     {
       "Situação da Execução": "Aplicando",
       "Executor Técnico": input.executorId,
-      "Snapshot Anterior à Aplicação": JSON.stringify(stableValues(context.individual.fields)),
+      "Snapshot Anterior à Aplicação": JSON.stringify(
+        stableValues(context.individual.fields),
+      ),
       "Hash Após Aplicação": afterHash,
       "Nota da Execução": note,
       "Erro da Execução": "",
@@ -337,7 +382,9 @@ export async function executeApprovedCorrection(input: {
     );
     const verifiedHash = await hashFields(updated.fields);
     if (verifiedHash !== afterHash) {
-      throw new Error("A verificação posterior não corresponde à alteração aprovada.");
+      throw new Error(
+        "A verificação posterior não corresponde à alteração aprovada.",
+      );
     }
 
     return finalizeExecution({
@@ -353,7 +400,9 @@ export async function executeApprovedCorrection(input: {
       {
         "Situação da Execução": "Falhou",
         "Erro da Execução":
-          error instanceof Error ? error.message.slice(0, 1000) : "Falha desconhecida.",
+          error instanceof Error
+            ? error.message.slice(0, 1000)
+            : "Falha desconhecida.",
       },
       { baseId: context.configuration.individualsPreviewBaseId },
     );

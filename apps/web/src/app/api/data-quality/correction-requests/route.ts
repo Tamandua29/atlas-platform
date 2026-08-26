@@ -13,11 +13,12 @@ export const dynamic = "force-dynamic";
 function parseStatus(value: string | null): CorrectionTreatmentStatus | "all" {
   if (!value || value === "all") return "all";
   if (
-    value === "open"
-    || value === "in_progress"
-    || value === "completed"
-    || value === "cancelled"
-  ) return value;
+    value === "open" ||
+    value === "in_progress" ||
+    value === "completed" ||
+    value === "cancelled"
+  )
+    return value;
   throw new ValidationError("O status informado é inválido.");
 }
 

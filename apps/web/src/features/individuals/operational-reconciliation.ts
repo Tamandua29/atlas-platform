@@ -51,20 +51,21 @@ function item(input: {
     reviewId: input.fields["ID Revisão"] ?? "",
     workflow: input.workflow,
     status: input.status,
-    actorId: (
-      execution
+    actorId:
+      (execution
         ? input.fields["Executor Técnico"]
         : input.fields["Executor da Reversão"]
-    )?.trim() || null,
+      )?.trim() || null,
     lastTransitionAt: execution
-      ? input.fields["Executada em"] ?? null
-      : input.fields["Revertida em"] ?? null,
+      ? (input.fields["Executada em"] ?? null)
+      : (input.fields["Revertida em"] ?? null),
     severity: failed ? "failure" : "attention",
-    errorPresent: Boolean((
-      execution
+    errorPresent: Boolean(
+      (execution
         ? input.fields["Erro da Execução"]
         : input.fields["Erro da Reversão"]
-    )?.trim()),
+      )?.trim(),
+    ),
     recommendedAction: failed
       ? "Inspecionar o registro protegido e executar a reconciliação controlada."
       : "Verificar se a escrita foi concluída antes de permitir nova tentativa.",
@@ -73,23 +74,20 @@ function item(input: {
 
 export async function getOperationalReconciliation(): Promise<OperationalReconciliation> {
   const configuration = getAirtableConfiguration();
-  const records = await listAllAirtableRecords<ReviewFields>(
-    REVIEW_TABLE_ID,
-    {
-      baseId: configuration.individualsPreviewBaseId,
-      fields: [
-        "ID Revisão",
-        "Situação da Execução",
-        "Executor Técnico",
-        "Executada em",
-        "Erro da Execução",
-        "Situação da Reversão",
-        "Executor da Reversão",
-        "Revertida em",
-        "Erro da Reversão",
-      ],
-    },
-  );
+  const records = await listAllAirtableRecords<ReviewFields>(REVIEW_TABLE_ID, {
+    baseId: configuration.individualsPreviewBaseId,
+    fields: [
+      "ID Revisão",
+      "Situação da Execução",
+      "Executor Técnico",
+      "Executada em",
+      "Erro da Execução",
+      "Situação da Reversão",
+      "Executor da Reversão",
+      "Revertida em",
+      "Erro da Reversão",
+    ],
+  });
 
   const items: ReconciliationItem[] = [];
   let totalManaged = 0;
@@ -108,11 +106,15 @@ export async function getOperationalReconciliation(): Promise<OperationalReconci
       if (executionStatus === "Aplicada") healthyCompleted += 1;
       if (executionStatus === "Aplicando") {
         applying += 1;
-        items.push(item({ fields, workflow: "execution", status: executionStatus }));
+        items.push(
+          item({ fields, workflow: "execution", status: executionStatus }),
+        );
       }
       if (executionStatus === "Falhou") {
         failed += 1;
-        items.push(item({ fields, workflow: "execution", status: executionStatus }));
+        items.push(
+          item({ fields, workflow: "execution", status: executionStatus }),
+        );
       }
     }
 
@@ -121,11 +123,15 @@ export async function getOperationalReconciliation(): Promise<OperationalReconci
       if (reversalStatus === "Revertida") healthyCompleted += 1;
       if (reversalStatus === "Revertendo") {
         reverting += 1;
-        items.push(item({ fields, workflow: "reversal", status: reversalStatus }));
+        items.push(
+          item({ fields, workflow: "reversal", status: reversalStatus }),
+        );
       }
       if (reversalStatus === "Falhou") {
         failed += 1;
-        items.push(item({ fields, workflow: "reversal", status: reversalStatus }));
+        items.push(
+          item({ fields, workflow: "reversal", status: reversalStatus }),
+        );
       }
     }
   }

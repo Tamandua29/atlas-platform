@@ -89,15 +89,15 @@ describe("operational map vehicle repository", () => {
     expect(entities).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-        id: "vehicle:vehicle-1:address-1",
-        type: "vehicle",
-        title: "Toyota Corolla",
-        description: "ABC•••3 — Cor: Prata — Ano: 2024",
-        coordinates: [-59.982, -3.101],
-        priority: "high",
-        status: "Apreendido",
-        reference: "vehicle-1",
-        locationLabel: "Rua Teste, 100 — Japiim — Manaus",
+          id: "vehicle:vehicle-1:address-1",
+          type: "vehicle",
+          title: "Toyota Corolla",
+          description: "ABC•••3 — Cor: Prata — Ano: 2024",
+          coordinates: [-59.982, -3.101],
+          priority: "high",
+          status: "Apreendido",
+          reference: "vehicle-1",
+          locationLabel: "Rua Teste, 100 — Japiim — Manaus",
         }),
       ]),
     );

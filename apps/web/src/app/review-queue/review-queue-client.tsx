@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ReviewComparisonPanel } from "./review-comparison-panel";
 
@@ -13,32 +9,21 @@ type SessionActor = {
   role: "reviewer" | "auditor" | "administrator";
 };
 
-type ReviewStatus =
-  | "open"
-  | "completed"
-  | "all";
+type ReviewStatus = "open" | "completed" | "all";
 
 type ReviewDecision =
-  | "pending"
-  | "same-person"
-  | "different-people"
-  | "inconclusive";
+  "pending" | "same-person" | "different-people" | "inconclusive";
 
 type ReviewItem = {
   recordId: string;
   reviewId: string;
-  status:
-    "open" | "completed";
+  status: "open" | "completed";
   openedOn: string;
-  completedOn:
-    string | null;
-  strategy:
-    "cpf" | "biographic";
-  confidence:
-    "high" | "medium";
+  completedOn: string | null;
+  strategy: "cpf" | "biographic";
+  confidence: "high" | "medium";
   recordCount: number;
-  decision:
-    ReviewDecision;
+  decision: ReviewDecision;
 };
 
 type ListResponse = {
@@ -73,8 +58,7 @@ const decisionOptions = [
     label: "Mesma pessoa",
   },
   {
-    value:
-      "different-people",
+    value: "different-people",
     label: "Pessoas distintas",
   },
   {
@@ -83,116 +67,55 @@ const decisionOptions = [
   },
 ] as const;
 
-function decisionLabel(
-  decision: ReviewDecision,
-): string {
-  if (
-    decision === "same-person"
-  ) {
+function decisionLabel(decision: ReviewDecision): string {
+  if (decision === "same-person") {
     return "Mesma pessoa";
   }
 
-  if (
-    decision ===
-    "different-people"
-  ) {
+  if (decision === "different-people") {
     return "Pessoas distintas";
   }
 
-  if (
-    decision === "inconclusive"
-  ) {
+  if (decision === "inconclusive") {
     return "Inconclusiva";
   }
 
   return "Pendente";
 }
 
-function formatDate(
-  value: string | null,
-): string {
+function formatDate(value: string | null): string {
   if (!value) {
     return "—";
   }
 
-  return new Intl.DateTimeFormat(
-    "pt-BR",
-    {
-      timeZone: "UTC",
-    },
-  ).format(
-    new Date(
-      `${value}T00:00:00.000Z`,
-    ),
-  );
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
 export function ReviewQueueClient() {
-  const [apiKey, setApiKey] =
-    useState("");
-  const [
-    connected,
-    setConnected,
-  ] = useState(false);
-  const [actor, setActor] =
-    useState<SessionActor | null>(null);
-  const [status, setStatus] =
-    useState<ReviewStatus>(
-      "open",
-    );
-  const [items, setItems] =
-    useState<ReviewItem[]>([]);
-  const [loading, setLoading] =
-    useState(false);
-  const [error, setError] =
-    useState("");
-  const [
-    auditPersisted,
-    setAuditPersisted,
-  ] = useState<boolean | null>(
+  const [apiKey, setApiKey] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [actor, setActor] = useState<SessionActor | null>(null);
+  const [status, setStatus] = useState<ReviewStatus>("open");
+  const [items, setItems] = useState<ReviewItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [auditPersisted, setAuditPersisted] = useState<boolean | null>(null);
+  const [selected, setSelected] = useState<ReviewItem | null>(null);
+  const [comparisonReview, setComparisonReview] = useState<ReviewItem | null>(
     null,
   );
-  const [
-    selected,
-    setSelected,
-  ] =
-    useState<ReviewItem | null>(
-      null,
-    );
-  const [
-    comparisonReview,
-    setComparisonReview,
-  ] =
-    useState<ReviewItem | null>(
-      null,
-    );
-  const [
-    decision,
-    setDecision,
-  ] = useState<
-    | "same-person"
-    | "different-people"
-    | "inconclusive"
+  const [decision, setDecision] = useState<
+    "same-person" | "different-people" | "inconclusive"
   >("same-person");
-  const [
-    justification,
-    setJustification,
-  ] = useState("");
-  const [
-    submitting,
-    setSubmitting,
-  ] = useState(false);
+  const [justification, setJustification] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const pendingCount =
-    useMemo(
-      () =>
-        items.filter(
-          (item) =>
-            item.status ===
-            "open",
-        ).length,
-      [items],
-    );
+  const pendingCount = useMemo(
+    () => items.filter((item) => item.status === "open").length,
+    [items],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +177,9 @@ export function ReviewQueueClient() {
         message?: string;
       };
       if (!response.ok || !payload.authenticated || !payload.actor) {
-        throw new Error(payload.message ?? "Não foi possível iniciar a sessão.");
+        throw new Error(
+          payload.message ?? "Não foi possível iniciar a sessão.",
+        );
       }
       setActor(payload.actor);
       setConnected(true);
@@ -264,7 +189,9 @@ export function ReviewQueueClient() {
       setActor(null);
       setConnected(false);
       setItems([]);
-      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+      setError(
+        caught instanceof Error ? caught.message : "Falha desconhecida.",
+      );
     } finally {
       setLoading(false);
     }
@@ -290,43 +217,28 @@ export function ReviewQueueClient() {
     }
   }
 
-  async function loadReviews(
-    nextStatus:
-      ReviewStatus = status,
-  ) {
+  async function loadReviews(nextStatus: ReviewStatus = status) {
     setLoading(true);
     setError("");
 
     try {
-      const response =
-        await fetch(
-          `/api/canonical-individuals/review-queue?status=${nextStatus}&limit=50`,
-          {
-            cache: "no-store",
-          },
-        );
+      const response = await fetch(
+        `/api/canonical-individuals/review-queue?status=${nextStatus}&limit=50`,
+        {
+          cache: "no-store",
+        },
+      );
 
-      const payload =
-        (await response.json()) as
-          ListResponse;
+      const payload = (await response.json()) as ListResponse;
 
-      if (
-        !response.ok ||
-        !payload.success
-      ) {
+      if (!response.ok || !payload.success) {
         throw new Error(
-          payload.message ??
-            "Não foi possível consultar a fila.",
+          payload.message ?? "Não foi possível consultar a fila.",
         );
       }
 
-      setItems(
-        payload.items ?? [],
-      );
-      setAuditPersisted(
-        payload.auditPersisted ??
-          false,
-      );
+      setItems(payload.items ?? []);
+      setAuditPersisted(payload.auditPersisted ?? false);
       setConnected(true);
       setStatus(nextStatus);
       setSelected(null);
@@ -335,31 +247,21 @@ export function ReviewQueueClient() {
       setConnected(false);
       setItems([]);
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "Falha desconhecida.",
+        caught instanceof Error ? caught.message : "Falha desconhecida.",
       );
     } finally {
       setLoading(false);
     }
   }
 
-  async function changeStatus(
-    nextStatus: ReviewStatus,
-  ) {
+  async function changeStatus(nextStatus: ReviewStatus) {
     setStatus(nextStatus);
-    await loadReviews(
-      nextStatus,
-    );
+    await loadReviews(nextStatus);
   }
 
-  function openDecision(
-    item: ReviewItem,
-  ) {
+  function openDecision(item: ReviewItem) {
     setSelected(item);
-    setDecision(
-      "same-person",
-    );
+    setDecision("same-person");
     setJustification("");
     setError("");
   }
@@ -369,13 +271,8 @@ export function ReviewQueueClient() {
       return;
     }
 
-    if (
-      justification.trim()
-        .length < 10
-    ) {
-      setError(
-        "A justificativa deve possuir ao menos 10 caracteres.",
-      );
+    if (justification.trim().length < 10) {
+      setError("A justificativa deve possuir ao menos 10 caracteres.");
       return;
     }
 
@@ -383,36 +280,28 @@ export function ReviewQueueClient() {
     setError("");
 
     try {
-      const response =
-        await fetch(
-          `/api/canonical-individuals/review-queue/${selected.recordId}/decision`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              decision,
-              justification:
-                justification.trim(),
-            }),
+      const response = await fetch(
+        `/api/canonical-individuals/review-queue/${selected.recordId}/decision`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            decision,
+            justification: justification.trim(),
+          }),
+        },
+      );
 
-      const payload =
-        (await response.json()) as {
-          success?: boolean;
-          message?: string;
-        };
+      const payload = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
 
-      if (
-        !response.ok ||
-        !payload.success
-      ) {
+      if (!response.ok || !payload.success) {
         throw new Error(
-          payload.message ??
-            "Não foi possível registrar a decisão.",
+          payload.message ?? "Não foi possível registrar a decisão.",
         );
       }
 
@@ -421,9 +310,7 @@ export function ReviewQueueClient() {
       await loadReviews(status);
     } catch (caught) {
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "Falha desconhecida.",
+        caught instanceof Error ? caught.message : "Falha desconhecida.",
       );
     } finally {
       setSubmitting(false);
@@ -445,7 +332,9 @@ export function ReviewQueueClient() {
             </h2>
 
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 md:text-base">
-              Revise correspondências sugeridas pelo sistema. Nenhuma decisão desta tela realiza mesclagem automática ou altera os registros de origem.
+              Revise correspondências sugeridas pelo sistema. Nenhuma decisão
+              desta tela realiza mesclagem automática ou altera os registros de
+              origem.
             </p>
           </div>
 
@@ -458,7 +347,8 @@ export function ReviewQueueClient() {
                 {actor.id}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Perfil: {actor.role === "administrator"
+                Perfil:{" "}
+                {actor.role === "administrator"
                   ? "Administrador"
                   : actor.role === "auditor"
                     ? "Auditor — somente leitura"
@@ -474,51 +364,45 @@ export function ReviewQueueClient() {
               </button>
             </div>
           ) : (
-          <form
-            className="rounded-2xl border border-slate-700/80 bg-slate-950/45 p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void authenticateAndLoad();
-            }}
-          >
-            <label
-              htmlFor="atlas-key"
-              className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400"
+            <form
+              className="rounded-2xl border border-slate-700/80 bg-slate-950/45 p-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void authenticateAndLoad();
+              }}
             >
-              Credencial institucional
-            </label>
-
-            <div className="mt-3 flex gap-2">
-              <input
-                id="atlas-key"
-                type="password"
-                value={apiKey}
-                onChange={(event) =>
-                  setApiKey(
-                    event.target
-                      .value,
-                  )
-                }
-                autoComplete="off"
-                className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
-                placeholder="Informe sua credencial"
-              />
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60"
+              <label
+                htmlFor="atlas-key"
+                className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400"
               >
-                {loading
-                  ? "Acessando..."
-                  : "Acessar"}
-              </button>
-            </div>
+                Credencial institucional
+              </label>
 
-            <p className="mt-2 text-[11px] leading-5 text-slate-500">
-              A credencial é trocada por uma sessão segura e não permanece disponível ao navegador.
-            </p>
-          </form>
+              <div className="mt-3 flex gap-2">
+                <input
+                  id="atlas-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                  autoComplete="off"
+                  className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+                  placeholder="Informe sua credencial"
+                />
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {loading ? "Acessando..." : "Acessar"}
+                </button>
+              </div>
+
+              <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                A credencial é trocada por uma sessão segura e não permanece
+                disponível ao navegador.
+              </p>
+            </form>
           )}
         </div>
       </section>
@@ -558,15 +442,13 @@ export function ReviewQueueClient() {
             Auditoria da consulta
           </p>
 
-          <p className={[
-            "mt-3 text-sm font-semibold",
-            auditPersisted
-              ? "text-emerald-300"
-              : "text-slate-500",
-          ].join(" ")}>
-            {auditPersisted
-              ? "Persistida"
-              : "Aguardando consulta"}
+          <p
+            className={[
+              "mt-3 text-sm font-semibold",
+              auditPersisted ? "text-emerald-300" : "text-slate-500",
+            ].join(" ")}
+          >
+            {auditPersisted ? "Persistida" : "Aguardando consulta"}
           </p>
         </article>
       </section>
@@ -574,9 +456,7 @@ export function ReviewQueueClient() {
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-[#0a1020]">
         <div className="flex flex-col gap-4 border-b border-slate-800 p-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="font-semibold text-white">
-              Fila de análise
-            </h3>
+            <h3 className="font-semibold text-white">Fila de análise</h3>
 
             <p className="mt-1 text-xs text-slate-500">
               Metadados mínimos necessários para a decisão.
@@ -584,37 +464,23 @@ export function ReviewQueueClient() {
           </div>
 
           <div className="flex rounded-xl border border-slate-800 bg-slate-950/60 p-1">
-            {statusOptions.map(
-              (option) => (
-                <button
-                  key={
-                    option.value
-                  }
-                  type="button"
-                  disabled={
-                    !connected ||
-                    loading
-                  }
-                  onClick={() =>
-                    void changeStatus(
-                      option.value,
-                    )
-                  }
-                  className={[
-                    "rounded-lg px-4 py-2 text-xs font-semibold transition",
-                    status ===
-                    option.value
-                      ? "bg-cyan-400 text-slate-950"
-                      : "text-slate-400 hover:text-white",
-                    !connected
-                      ? "cursor-not-allowed opacity-50"
-                      : "",
-                  ].join(" ")}
-                >
-                  {option.label}
-                </button>
-              ),
-            )}
+            {statusOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                disabled={!connected || loading}
+                onClick={() => void changeStatus(option.value)}
+                className={[
+                  "rounded-lg px-4 py-2 text-xs font-semibold transition",
+                  status === option.value
+                    ? "bg-cyan-400 text-slate-950"
+                    : "text-slate-400 hover:text-white",
+                  !connected ? "cursor-not-allowed opacity-50" : "",
+                ].join(" ")}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -624,12 +490,11 @@ export function ReviewQueueClient() {
               ◈
             </div>
 
-            <h4 className="mt-5 font-semibold text-white">
-              Acesso protegido
-            </h4>
+            <h4 className="mt-5 font-semibold text-white">Acesso protegido</h4>
 
             <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Autentique-se para consultar a fila. Nenhum dado é carregado antes da autorização.
+              Autentique-se para consultar a fila. Nenhum dado é carregado antes
+              da autorização.
             </p>
           </div>
         ) : items.length === 0 ? (
@@ -664,75 +529,53 @@ export function ReviewQueueClient() {
                     </p>
                   </div>
 
-                  <span className={[
-                    "rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-wider",
-                    item.status ===
-                    "open"
-                      ? "border-amber-400/25 bg-amber-400/10 text-amber-200"
-                      : "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
-                  ].join(" ")}>
-                    {item.status ===
-                    "open"
-                      ? "Pendente"
-                      : "Concluída"}
+                  <span
+                    className={[
+                      "rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-wider",
+                      item.status === "open"
+                        ? "border-amber-400/25 bg-amber-400/10 text-amber-200"
+                        : "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
+                    ].join(" ")}
+                  >
+                    {item.status === "open" ? "Pendente" : "Concluída"}
                   </span>
                 </div>
 
                 <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <dt className="text-xs text-slate-600">
-                      Estratégia
-                    </dt>
+                    <dt className="text-xs text-slate-600">Estratégia</dt>
                     <dd className="mt-1 text-slate-300">
-                      {item.strategy ===
-                      "cpf"
+                      {item.strategy === "cpf"
                         ? "CPF estrutural"
                         : "Biográfica"}
                     </dd>
                   </div>
 
                   <div>
-                    <dt className="text-xs text-slate-600">
-                      Confiança
-                    </dt>
+                    <dt className="text-xs text-slate-600">Confiança</dt>
                     <dd className="mt-1 text-slate-300">
-                      {item.confidence ===
-                      "high"
-                        ? "Alta"
-                        : "Média"}
+                      {item.confidence === "high" ? "Alta" : "Média"}
                     </dd>
                   </div>
 
                   <div>
-                    <dt className="text-xs text-slate-600">
-                      Registros
-                    </dt>
-                    <dd className="mt-1 text-slate-300">
-                      {item.recordCount}
-                    </dd>
+                    <dt className="text-xs text-slate-600">Registros</dt>
+                    <dd className="mt-1 text-slate-300">{item.recordCount}</dd>
                   </div>
 
                   <div>
-                    <dt className="text-xs text-slate-600">
-                      Abertura
-                    </dt>
+                    <dt className="text-xs text-slate-600">Abertura</dt>
                     <dd className="mt-1 text-slate-300">
-                      {formatDate(
-                        item.openedOn,
-                      )}
+                      {formatDate(item.openedOn)}
                     </dd>
                   </div>
                 </dl>
 
                 <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-800 pt-4">
                   <div>
-                    <p className="text-xs text-slate-600">
-                      Decisão
-                    </p>
+                    <p className="text-xs text-slate-600">Decisão</p>
                     <p className="mt-1 text-sm font-medium text-white">
-                      {decisionLabel(
-                        item.decision,
-                      )}
+                      {decisionLabel(item.decision)}
                     </p>
                   </div>
 
@@ -740,29 +583,18 @@ export function ReviewQueueClient() {
                     <button
                       type="button"
                       onClick={() => {
-                        setComparisonReview(
-                          item,
-                        );
-                        setSelected(
-                          null,
-                        );
+                        setComparisonReview(item);
+                        setSelected(null);
                       }}
                       className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/15"
                     >
                       Comparar
                     </button>
 
-                    {item.status ===
-                      "open" &&
-                      actor?.role !==
-                        "auditor" && (
+                    {item.status === "open" && actor?.role !== "auditor" && (
                       <button
                         type="button"
-                        onClick={() =>
-                          openDecision(
-                            item,
-                          )
-                        }
+                        onClick={() => openDecision(item)}
                         className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
                       >
                         Revisar
@@ -779,11 +611,7 @@ export function ReviewQueueClient() {
       {comparisonReview && (
         <ReviewComparisonPanel
           review={comparisonReview}
-          onClose={() =>
-            setComparisonReview(
-              null,
-            )
-          }
+          onClose={() => setComparisonReview(null)}
         />
       )}
 
@@ -800,15 +628,14 @@ export function ReviewQueueClient() {
               </h3>
 
               <p className="mt-2 text-sm text-slate-500">
-                A decisão será definitiva e auditada. Nenhuma mesclagem será executada.
+                A decisão será definitiva e auditada. Nenhuma mesclagem será
+                executada.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() =>
-                setSelected(null)
-              }
+              onClick={() => setSelected(null)}
               className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-400 hover:text-white"
             >
               Fechar
@@ -828,27 +655,15 @@ export function ReviewQueueClient() {
                 id="decision"
                 value={decision}
                 onChange={(event) =>
-                  setDecision(
-                    event.target
-                      .value as typeof decision,
-                  )
+                  setDecision(event.target.value as typeof decision)
                 }
                 className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
               >
-                {decisionOptions.map(
-                  (option) => (
-                    <option
-                      key={
-                        option.value
-                      }
-                      value={
-                        option.value
-                      }
-                    >
-                      {option.label}
-                    </option>
-                  ),
-                )}
+                {decisionOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -862,15 +677,8 @@ export function ReviewQueueClient() {
 
               <textarea
                 id="justification"
-                value={
-                  justification
-                }
-                onChange={(event) =>
-                  setJustification(
-                    event.target
-                      .value,
-                  )
-                }
+                value={justification}
+                onChange={(event) => setJustification(event.target.value)}
                 rows={4}
                 className="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-700 focus:border-cyan-400"
                 placeholder="Registre os fundamentos da decisão sem inserir dados pessoais desnecessários."
@@ -882,14 +690,10 @@ export function ReviewQueueClient() {
             <button
               type="button"
               disabled={submitting}
-              onClick={() =>
-                void submitDecision()
-              }
+              onClick={() => void submitDecision()}
               className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60"
             >
-              {submitting
-                ? "Registrando..."
-                : "Registrar decisão"}
+              {submitting ? "Registrando..." : "Registrar decisão"}
             </button>
           </div>
         </section>

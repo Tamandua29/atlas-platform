@@ -5,15 +5,11 @@ import { NextResponse } from "next/server";
 import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { previewCanonicalIndividualsFromAirtable } from "@/features/individuals/canonical-individual-preview";
 
-export const dynamic =
-  "force-dynamic";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const individuals =
-      await previewCanonicalIndividualsFromAirtable(
-        5,
-      );
+    const individuals = await previewCanonicalIndividualsFromAirtable(5);
 
     const audit = AuditEntry.create({
       action: "individuals.canonical.preview",
@@ -26,27 +22,19 @@ export async function GET() {
       },
     });
 
-    const auditPersisted =
-      await persistAuditSafely(
-        audit,
-      );
+    const auditPersisted = await persistAuditSafely(audit);
 
     return NextResponse.json({
       success: true,
       auditPersisted,
-      correlationId:
-        audit.correlationId,
+      correlationId: audit.correlationId,
       mode: "read-only-preview",
       count: individuals.length,
       individuals,
-      generatedAt:
-        new Date().toISOString(),
+      generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error(
-      "Falha ao gerar prévia canônica de indivíduos:",
-      error,
-    );
+    console.error("Falha ao gerar prévia canônica de indivíduos:", error);
 
     const audit = AuditEntry.create({
       action: "individuals.canonical.preview",
@@ -62,8 +50,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        correlationId:
-          audit.correlationId,
+        correlationId: audit.correlationId,
         mode: "read-only-preview",
         count: 0,
         individuals: [],

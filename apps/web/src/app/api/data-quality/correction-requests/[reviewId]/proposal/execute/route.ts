@@ -24,8 +24,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       confirmation?: unknown;
       note?: unknown;
     };
-    if (typeof payload.confirmation !== "string" || typeof payload.note !== "string") {
-      throw new ValidationError("A confirmação e a nota operacional devem ser textuais.");
+    if (
+      typeof payload.confirmation !== "string" ||
+      typeof payload.note !== "string"
+    ) {
+      throw new ValidationError(
+        "A confirmação e a nota operacional devem ser textuais.",
+      );
     }
 
     const result = await executeApprovedCorrection({

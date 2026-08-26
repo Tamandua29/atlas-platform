@@ -7,11 +7,9 @@ import type {
 
 import type { OperationalZoneFeatureCollection } from "./operational-map.geojson";
 
-export const OPERATIONAL_ZONES_SOURCE_ID =
-  "atlas-operational-zones-source";
+export const OPERATIONAL_ZONES_SOURCE_ID = "atlas-operational-zones-source";
 
-export const OPERATIONAL_ZONES_FILL_LAYER_ID =
-  "atlas-operational-zones-fill";
+export const OPERATIONAL_ZONES_FILL_LAYER_ID = "atlas-operational-zones-fill";
 
 export const OPERATIONAL_ZONES_OUTLINE_LAYER_ID =
   "atlas-operational-zones-outline";
@@ -22,8 +20,7 @@ export const OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID =
 export const OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID =
   "atlas-operational-zones-selected-outline";
 
-export const OPERATIONAL_ZONES_LABEL_LAYER_ID =
-  "atlas-operational-zones-label";
+export const OPERATIONAL_ZONES_LABEL_LAYER_ID = "atlas-operational-zones-label";
 
 export const OPERATIONAL_ZONE_LAYER_IDS = [
   OPERATIONAL_ZONES_FILL_LAYER_ID,
@@ -33,9 +30,7 @@ export const OPERATIONAL_ZONE_LAYER_IDS = [
   OPERATIONAL_ZONES_LABEL_LAYER_ID,
 ] as const;
 
-export type OperationalZoneClickHandler = (
-  event: MapLayerMouseEvent,
-) => void;
+export type OperationalZoneClickHandler = (event: MapLayerMouseEvent) => void;
 
 export type OperationalZoneLayerHandlers = {
   onZoneClick: OperationalZoneClickHandler;
@@ -58,28 +53,18 @@ function layerExists(map: Map, layerId: string) {
 }
 
 function getZonesSource(map: Map) {
-  return map.getSource(
-    OPERATIONAL_ZONES_SOURCE_ID,
-  ) as GeoJSONSource | undefined;
+  return map.getSource(OPERATIONAL_ZONES_SOURCE_ID) as
+    GeoJSONSource | undefined;
 }
 
 function createZoneVisibilityExpression(): ExpressionSpecification {
-  return [
-    "case",
-    ["boolean", ["feature-state", "visible"], true],
-    1,
-    0,
-  ];
+  return ["case", ["boolean", ["feature-state", "visible"], true], 1, 0];
 }
 
 function createSelectedZoneFilter(
   selectedZoneId: string | null,
 ): ["==", ["get", "id"], string] {
-  return [
-    "==",
-    ["get", "id"],
-    selectedZoneId ?? "__none__",
-  ];
+  return ["==", ["get", "id"], selectedZoneId ?? "__none__"];
 }
 
 export function addOperationalZoneLayers({
@@ -102,42 +87,25 @@ export function addOperationalZoneLayers({
       source: OPERATIONAL_ZONES_SOURCE_ID,
 
       paint: {
-        "fill-color": [
-          "coalesce",
-          ["get", "color"],
-          "#22d3ee",
-        ],
+        "fill-color": ["coalesce", ["get", "color"], "#22d3ee"],
 
         "fill-opacity": [
           "*",
-          [
-            "coalesce",
-            ["get", "fillOpacity"],
-            0.18,
-          ],
+          ["coalesce", ["get", "fillOpacity"], 0.18],
           createZoneVisibilityExpression(),
         ],
       },
     });
   }
 
-  if (
-    !layerExists(
-      map,
-      OPERATIONAL_ZONES_OUTLINE_LAYER_ID,
-    )
-  ) {
+  if (!layerExists(map, OPERATIONAL_ZONES_OUTLINE_LAYER_ID)) {
     map.addLayer({
       id: OPERATIONAL_ZONES_OUTLINE_LAYER_ID,
       type: "line",
       source: OPERATIONAL_ZONES_SOURCE_ID,
 
       paint: {
-        "line-color": [
-          "coalesce",
-          ["get", "color"],
-          "#22d3ee",
-        ],
+        "line-color": ["coalesce", ["get", "color"], "#22d3ee"],
 
         "line-width": [
           "interpolate",
@@ -156,12 +124,7 @@ export function addOperationalZoneLayers({
     });
   }
 
-  if (
-    !layerExists(
-      map,
-      OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID,
-    )
-  ) {
+  if (!layerExists(map, OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID)) {
     map.addLayer({
       id: OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID,
       type: "fill",
@@ -170,23 +133,14 @@ export function addOperationalZoneLayers({
       filter: createSelectedZoneFilter(null),
 
       paint: {
-        "fill-color": [
-          "coalesce",
-          ["get", "color"],
-          "#22d3ee",
-        ],
+        "fill-color": ["coalesce", ["get", "color"], "#22d3ee"],
 
         "fill-opacity": 0.38,
       },
     });
   }
 
-  if (
-    !layerExists(
-      map,
-      OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID,
-    )
-  ) {
+  if (!layerExists(map, OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID)) {
     map.addLayer({
       id: OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID,
       type: "line",
@@ -239,23 +193,11 @@ export function addOperationalZoneLayers({
     });
   }
 
-  map.on(
-    "click",
-    OPERATIONAL_ZONES_FILL_LAYER_ID,
-    handlers.onZoneClick,
-  );
+  map.on("click", OPERATIONAL_ZONES_FILL_LAYER_ID, handlers.onZoneClick);
 
-  map.on(
-    "mouseenter",
-    OPERATIONAL_ZONES_FILL_LAYER_ID,
-    handlers.onMouseEnter,
-  );
+  map.on("mouseenter", OPERATIONAL_ZONES_FILL_LAYER_ID, handlers.onMouseEnter);
 
-  map.on(
-    "mouseleave",
-    OPERATIONAL_ZONES_FILL_LAYER_ID,
-    handlers.onMouseLeave,
-  );
+  map.on("mouseleave", OPERATIONAL_ZONES_FILL_LAYER_ID, handlers.onMouseLeave);
 }
 
 export function updateOperationalZoneSource(
@@ -271,48 +213,23 @@ export function selectOperationalZoneLayer(
   map: Map,
   selectedZoneId: string | null,
 ) {
-  const filter = createSelectedZoneFilter(
-    selectedZoneId,
-  );
+  const filter = createSelectedZoneFilter(selectedZoneId);
 
-  if (
-    layerExists(
-      map,
-      OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID,
-    )
-  ) {
-    map.setFilter(
-      OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID,
-      filter,
-    );
+  if (layerExists(map, OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID)) {
+    map.setFilter(OPERATIONAL_ZONES_SELECTED_FILL_LAYER_ID, filter);
   }
 
-  if (
-    layerExists(
-      map,
-      OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID,
-    )
-  ) {
-    map.setFilter(
-      OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID,
-      filter,
-    );
+  if (layerExists(map, OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID)) {
+    map.setFilter(OPERATIONAL_ZONES_SELECTED_OUTLINE_LAYER_ID, filter);
   }
 }
 
-export function setOperationalZoneLayersVisibility(
-  map: Map,
-  visible: boolean,
-) {
+export function setOperationalZoneLayersVisibility(map: Map, visible: boolean) {
   const visibility = visible ? "visible" : "none";
 
   for (const layerId of OPERATIONAL_ZONE_LAYER_IDS) {
     if (layerExists(map, layerId)) {
-      map.setLayoutProperty(
-        layerId,
-        "visibility",
-        visibility,
-      );
+      map.setLayoutProperty(layerId, "visibility", visibility);
     }
   }
 }
@@ -321,14 +238,8 @@ export function removeOperationalZoneLayers(
   map: Map,
   handlers: OperationalZoneLayerHandlers,
 ) {
-  if (
-    layerExists(map, OPERATIONAL_ZONES_FILL_LAYER_ID)
-  ) {
-    map.off(
-      "click",
-      OPERATIONAL_ZONES_FILL_LAYER_ID,
-      handlers.onZoneClick,
-    );
+  if (layerExists(map, OPERATIONAL_ZONES_FILL_LAYER_ID)) {
+    map.off("click", OPERATIONAL_ZONES_FILL_LAYER_ID, handlers.onZoneClick);
 
     map.off(
       "mouseenter",

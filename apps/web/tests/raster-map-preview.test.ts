@@ -6,7 +6,11 @@ describe("buildRasterMapTiles", () => {
     const tiles = buildRasterMapTiles(-3.011942, -59.979328);
 
     expect(tiles).toHaveLength(15);
-    expect(tiles.every((tile) => tile.url.startsWith("https://tile.openstreetmap.org/15/"))).toBe(true);
+    expect(
+      tiles.every((tile) =>
+        tile.url.startsWith("https://tile.openstreetmap.org/15/"),
+      ),
+    ).toBe(true);
     expect(new Set(tiles.map((tile) => tile.key)).size).toBe(15);
   });
 

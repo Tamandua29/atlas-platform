@@ -43,7 +43,9 @@ function linkedToIndividual(
 }
 
 function maskPlate(value: unknown): string {
-  const plate = text(value).replace(/[^A-Za-z0-9]/g, "").toLocaleUpperCase("pt-BR");
+  const plate = text(value)
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toLocaleUpperCase("pt-BR");
   if (!plate) return "Placa não informada";
   if (plate.length <= 3) return "•".repeat(plate.length);
   return `${plate.slice(0, 3)}•${"•".repeat(Math.max(0, plate.length - 5))}${plate.slice(-1)}`;
@@ -51,10 +53,10 @@ function maskPlate(value: unknown): string {
 
 function validYear(value: unknown): number | null {
   const currentYear = new Date().getUTCFullYear() + 1;
-  return typeof value === "number"
-    && Number.isInteger(value)
-    && value >= 1900
-    && value <= currentYear
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1900 &&
+    value <= currentYear
     ? value
     : null;
 }

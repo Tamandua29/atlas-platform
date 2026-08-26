@@ -24,28 +24,45 @@ export async function GET() {
       listVehicleDirectory(200),
       listOperationalWarrants(200),
     ]);
-    const overview = buildIntelligenceOverview({ individuals, organizations, vehicles, warrants });
-    const auditPersisted = await persistAuditSafely(AuditEntry.create({
-      action: "intelligence.overview.read",
-      outcome: "success",
-      occurredAt: new Date(),
-      correlationId,
-      processedCount: overview.totals.all,
-      successCount: overview.totals.all,
-      metadata: {
-        actorId: authorization.session.actorId,
-        actorRole: authorization.session.role,
-        mode: "protected-intelligence-overview",
-      },
-    }));
+    const overview = buildIntelligenceOverview({
+      individuals,
+      organizations,
+      vehicles,
+      warrants,
+    });
+    const auditPersisted = await persistAuditSafely(
+      AuditEntry.create({
+        action: "intelligence.overview.read",
+        outcome: "success",
+        occurredAt: new Date(),
+        correlationId,
+        processedCount: overview.totals.all,
+        successCount: overview.totals.all,
+        metadata: {
+          actorId: authorization.session.actorId,
+          actorRole: authorization.session.role,
+          mode: "protected-intelligence-overview",
+        },
+      }),
+    );
 
     return NextResponse.json(
-      { success: true, auditPersisted, correlationId, mode: "aggregate-only", overview },
+      {
+        success: true,
+        auditPersisted,
+        correlationId,
+        mode: "aggregate-only",
+        overview,
+      },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, correlationId, message: error instanceof Error ? error.message : "Erro desconhecido." },
+      {
+        success: false,
+        correlationId,
+        message: error instanceof Error ? error.message : "Erro desconhecido.",
+      },
       { status: 500 },
     );
   }

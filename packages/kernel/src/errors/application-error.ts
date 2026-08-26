@@ -1,5 +1,4 @@
-export type ApplicationErrorMetadata =
-  Readonly<Record<string, unknown>>;
+export type ApplicationErrorMetadata = Readonly<Record<string, unknown>>;
 
 export abstract class ApplicationError extends Error {
   abstract readonly code: string;
@@ -20,10 +19,7 @@ export abstract class ApplicationError extends Error {
     this.name = new.target.name;
     this.metadata = options?.metadata;
 
-    Object.setPrototypeOf(
-      this,
-      new.target.prototype,
-    );
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 
   toJSON() {
@@ -39,10 +35,7 @@ export abstract class ApplicationError extends Error {
 export class ValidationError extends ApplicationError {
   readonly code = "VALIDATION_ERROR";
 
-  constructor(
-    message: string,
-    metadata?: ApplicationErrorMetadata,
-  ) {
+  constructor(message: string, metadata?: ApplicationErrorMetadata) {
     super(message, { metadata });
   }
 }
@@ -50,10 +43,7 @@ export class ValidationError extends ApplicationError {
 export class NotFoundError extends ApplicationError {
   readonly code = "NOT_FOUND";
 
-  constructor(
-    entityName: string,
-    identifier?: string,
-  ) {
+  constructor(entityName: string, identifier?: string) {
     super(
       identifier
         ? `${entityName} não encontrado: ${identifier}.`
@@ -71,10 +61,7 @@ export class NotFoundError extends ApplicationError {
 export class ConflictError extends ApplicationError {
   readonly code = "CONFLICT";
 
-  constructor(
-    message: string,
-    metadata?: ApplicationErrorMetadata,
-  ) {
+  constructor(message: string, metadata?: ApplicationErrorMetadata) {
     super(message, { metadata });
   }
 }
@@ -82,9 +69,7 @@ export class ConflictError extends ApplicationError {
 export class UnauthorizedError extends ApplicationError {
   readonly code = "UNAUTHORIZED";
 
-  constructor(
-    message = "Acesso não autorizado.",
-  ) {
+  constructor(message = "Acesso não autorizado.") {
     super(message);
   }
 }
@@ -92,9 +77,7 @@ export class UnauthorizedError extends ApplicationError {
 export class ForbiddenError extends ApplicationError {
   readonly code = "FORBIDDEN";
 
-  constructor(
-    message = "Operação não permitida.",
-  ) {
+  constructor(message = "Operação não permitida.") {
     super(message);
   }
 }

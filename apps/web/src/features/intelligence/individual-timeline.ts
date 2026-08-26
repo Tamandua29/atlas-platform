@@ -1,7 +1,14 @@
 export type IndividualTimelineEvent = {
   id: string;
   occurredAt: string;
-  category: "occurrence" | "warrant" | "document" | "photo" | "vehicle" | "phone" | "relationship";
+  category:
+    | "occurrence"
+    | "warrant"
+    | "document"
+    | "photo"
+    | "vehicle"
+    | "phone"
+    | "relationship";
   title: string;
   summary: string | null;
 };
@@ -69,7 +76,8 @@ export function buildIndividualTimeline(
       id: `occurrence:${occurrence.recordId}`,
       occurredAt: occurrence.occurredAt,
       category: "occurrence",
-      title: occurrence.nature || occurrence.category || "Ocorrência registrada",
+      title:
+        occurrence.nature || occurrence.category || "Ocorrência registrada",
       summary: occurrence.maskedOccurrenceNumber,
     });
   }
@@ -124,7 +132,10 @@ export function buildIndividualTimeline(
       occurredAt: vehicle.informationDate,
       category: "vehicle",
       title: "Informação de veículo registrada",
-      summary: [vehicle.brand, vehicle.model, vehicle.relationshipType].filter(Boolean).join(" — ") || null,
+      summary:
+        [vehicle.brand, vehicle.model, vehicle.relationshipType]
+          .filter(Boolean)
+          .join(" — ") || null,
     });
   }
 

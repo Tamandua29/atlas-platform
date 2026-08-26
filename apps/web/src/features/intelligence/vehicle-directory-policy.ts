@@ -28,11 +28,13 @@ export function filterVehicleDirectory<T extends FilterableVehicle>(
   const search = normalized(query);
   if (!search) return vehicles;
 
-  return vehicles.filter((vehicle) => [
-    vehicle.maskedPlate,
-    vehicle.brand || "",
-    vehicle.model || "",
-    vehicle.color || "",
-    vehicle.status || "",
-  ].some((value) => normalized(value).includes(search)));
+  return vehicles.filter((vehicle) =>
+    [
+      vehicle.maskedPlate,
+      vehicle.brand || "",
+      vehicle.model || "",
+      vehicle.color || "",
+      vehicle.status || "",
+    ].some((value) => normalized(value).includes(search)),
+  );
 }

@@ -10,17 +10,13 @@ export type SourceRecordReferenceInput = {
   readonly importedAt: Date;
 };
 
-function required(
-  value: string,
-  field: string,
-): string {
+function required(value: string, field: string): string {
   const normalized = value.trim();
 
   if (!normalized) {
-    throw new ValidationError(
-      `A referência de origem exige ${field}.`,
-      { field },
-    );
+    throw new ValidationError(`A referência de origem exige ${field}.`, {
+      field,
+    });
   }
 
   return normalized;
@@ -33,54 +29,28 @@ export class SourceRecordReference {
   readonly recordId: string;
   readonly importedAt: Date;
 
-  private constructor(
-    input: SourceRecordReferenceInput,
-  ) {
+  private constructor(input: SourceRecordReferenceInput) {
     this.system = input.system;
     this.baseId = input.baseId;
     this.tableId = input.tableId;
     this.recordId = input.recordId;
-    this.importedAt = new Date(
-      input.importedAt.getTime(),
-    );
+    this.importedAt = new Date(input.importedAt.getTime());
   }
 
-  static create(
-    input: SourceRecordReferenceInput,
-  ): SourceRecordReference {
-    if (
-      Number.isNaN(
-        input.importedAt.getTime(),
-      )
-    ) {
-      throw new ValidationError(
-        "A data de importação da origem é inválida.",
-      );
+  static create(input: SourceRecordReferenceInput): SourceRecordReference {
+    if (Number.isNaN(input.importedAt.getTime())) {
+      throw new ValidationError("A data de importação da origem é inválida.");
     }
 
     return new SourceRecordReference({
       ...input,
-      baseId: required(
-        input.baseId,
-        "baseId",
-      ),
-      tableId: required(
-        input.tableId,
-        "tableId",
-      ),
-      recordId: required(
-        input.recordId,
-        "recordId",
-      ),
+      baseId: required(input.baseId, "baseId"),
+      tableId: required(input.tableId, "tableId"),
+      recordId: required(input.recordId, "recordId"),
     });
   }
 
   get key(): string {
-    return [
-      this.system,
-      this.baseId,
-      this.tableId,
-      this.recordId,
-    ].join(":");
+    return [this.system, this.baseId, this.tableId, this.recordId].join(":");
   }
 }

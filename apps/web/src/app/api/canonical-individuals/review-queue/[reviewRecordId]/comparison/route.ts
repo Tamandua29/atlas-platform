@@ -17,7 +17,8 @@ export async function GET(_request: Request, context: RouteContext) {
   const correlationId = crypto.randomUUID();
 
   try {
-    const comparison = await getProtectedDuplicateReviewComparison(reviewRecordId);
+    const comparison =
+      await getProtectedDuplicateReviewComparison(reviewRecordId);
     const audit = AuditEntry.create({
       action: "individuals.duplicate-review.compare",
       outcome: "success",
@@ -68,7 +69,10 @@ export async function GET(_request: Request, context: RouteContext) {
         correlationId,
         mode: "session-protected-field-comparison",
         automaticMergesPerformed: 0,
-        message: error instanceof Error ? error.message : "Erro desconhecido ao abrir a comparação.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao abrir a comparação.",
       },
       {
         status: error instanceof NotFoundError ? 404 : 500,

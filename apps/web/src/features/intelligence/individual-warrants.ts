@@ -80,8 +80,14 @@ function toIndividualWarrant(record: {
 }): IndividualWarrant {
   return {
     recordId: record.id,
-    maskedWarrantNumber: maskReference(record.fields["Número do Mandado"], "Mandado sem referência"),
-    maskedCaseNumber: maskReference(record.fields["Número do Processo"], "Processo não informado"),
+    maskedWarrantNumber: maskReference(
+      record.fields["Número do Mandado"],
+      "Mandado sem referência",
+    ),
+    maskedCaseNumber: maskReference(
+      record.fields["Número do Processo"],
+      "Processo não informado",
+    ),
     issuingAuthority: text(record.fields["Autoridade Emissora"]) || null,
     court: text(record.fields.Tribunal) || null,
     type: text(record.fields["Tipo de Mandado"]) || null,
@@ -93,7 +99,9 @@ function toIndividualWarrant(record: {
   };
 }
 
-async function loadWarrants(): Promise<Array<{ id: string; fields: WarrantFields }>> {
+async function loadWarrants(): Promise<
+  Array<{ id: string; fields: WarrantFields }>
+> {
   const configuration = getAirtableConfiguration();
   return listAllAirtableRecords<WarrantFields>(configuration.warrantsTableId, {
     baseId: configuration.individualsPreviewBaseId,
@@ -139,15 +147,20 @@ export async function summarizeWarrantsByIndividual(
   now = new Date(),
 ): Promise<Record<string, IndividualWarrantSummary>> {
   const validIds = new Set(
-    individualRecordIds.filter((recordId) => /^rec[a-zA-Z0-9]+$/.test(recordId)),
+    individualRecordIds.filter((recordId) =>
+      /^rec[a-zA-Z0-9]+$/.test(recordId),
+    ),
   );
   const summaries = Object.fromEntries(
-    [...validIds].map((recordId) => [recordId, {
-      linkedCount: 0,
-      activeCount: 0,
-      expiringCount: 0,
-      needsVerificationCount: 0,
-    }]),
+    [...validIds].map((recordId) => [
+      recordId,
+      {
+        linkedCount: 0,
+        activeCount: 0,
+        expiringCount: 0,
+        needsVerificationCount: 0,
+      },
+    ]),
   ) as Record<string, IndividualWarrantSummary>;
 
   if (validIds.size === 0) return summaries;
@@ -155,7 +168,11 @@ export async function summarizeWarrantsByIndividual(
   const records = await loadWarrants();
   for (const record of records) {
     const warrant = toIndividualWarrant(record);
-    const attention = classifyWarrantAttention(warrant.status, warrant.expiresAt, now);
+    const attention = classifyWarrantAttention(
+      warrant.status,
+      warrant.expiresAt,
+      now,
+    );
 
     for (const recordId of validIds) {
       if (!linkedToIndividual(record.fields, recordId)) continue;

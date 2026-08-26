@@ -9,13 +9,9 @@ export type ResultState<TValue, TError> =
     };
 
 export class Result<TValue, TError = Error> {
-  private constructor(
-    private readonly state: ResultState<TValue, TError>,
-  ) {}
+  private constructor(private readonly state: ResultState<TValue, TError>) {}
 
-  static ok<TValue, TError = never>(
-    value: TValue,
-  ): Result<TValue, TError> {
+  static ok<TValue, TError = never>(value: TValue): Result<TValue, TError> {
     return new Result<TValue, TError>({
       success: true,
       value,
@@ -59,68 +55,46 @@ export class Result<TValue, TError = Error> {
     return this.state.error;
   }
 
-  map<TMapped>(
-    mapper: (value: TValue) => TMapped,
-  ): Result<TMapped, TError> {
+  map<TMapped>(mapper: (value: TValue) => TMapped): Result<TMapped, TError> {
     if (this.state.success) {
-      return Result.ok<TMapped, TError>(
-        mapper(this.state.value),
-      );
+      return Result.ok<TMapped, TError>(mapper(this.state.value));
     }
 
-    return Result.fail<TMapped, TError>(
-      this.state.error,
-    );
+    return Result.fail<TMapped, TError>(this.state.error);
   }
 
   mapError<TMappedError>(
     mapper: (error: TError) => TMappedError,
   ): Result<TValue, TMappedError> {
     if (!this.state.success) {
-      return Result.fail<TValue, TMappedError>(
-        mapper(this.state.error),
-      );
+      return Result.fail<TValue, TMappedError>(mapper(this.state.error));
     }
 
-    return Result.ok<TValue, TMappedError>(
-      this.state.value,
-    );
+    return Result.ok<TValue, TMappedError>(this.state.value);
   }
 
   flatMap<TMapped>(
-    mapper: (
-      value: TValue,
-    ) => Result<TMapped, TError>,
+    mapper: (value: TValue) => Result<TMapped, TError>,
   ): Result<TMapped, TError> {
     if (this.state.success) {
       return mapper(this.state.value);
     }
 
-    return Result.fail<TMapped, TError>(
-      this.state.error,
-    );
+    return Result.fail<TMapped, TError>(this.state.error);
   }
 
   getOrElse(fallback: TValue): TValue {
-    return this.state.success
-      ? this.state.value
-      : fallback;
+    return this.state.success ? this.state.value : fallback;
   }
 
-  match<TResult>(
-    handlers: {
-      success: (value: TValue) => TResult;
-      failure: (error: TError) => TResult;
-    },
-  ): TResult {
+  match<TResult>(handlers: {
+    success: (value: TValue) => TResult;
+    failure: (error: TError) => TResult;
+  }): TResult {
     if (this.state.success) {
-      return handlers.success(
-        this.state.value,
-      );
+      return handlers.success(this.state.value);
     }
 
-    return handlers.failure(
-      this.state.error,
-    );
+    return handlers.failure(this.state.error);
   }
 }

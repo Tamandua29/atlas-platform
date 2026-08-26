@@ -92,8 +92,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   try {
     const payload = (await request.json()) as { values?: unknown };
-    if (!payload.values || typeof payload.values !== "object" || Array.isArray(payload.values)) {
-      throw new ValidationError("Os valores propostos devem ser informados em objeto estruturado.");
+    if (
+      !payload.values ||
+      typeof payload.values !== "object" ||
+      Array.isArray(payload.values)
+    ) {
+      throw new ValidationError(
+        "Os valores propostos devem ser informados em objeto estruturado.",
+      );
     }
 
     const proposal = await saveCorrectionProposal({

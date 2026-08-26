@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 function parseStatus(value: string | null): DuplicateReviewListStatus {
   if (!value) return "open";
-  if (value === "open" || value === "completed" || value === "all") return value;
+  if (value === "open" || value === "completed" || value === "all")
+    return value;
   throw new ValidationError("O filtro status deve ser open, completed ou all.");
 }
 
@@ -82,7 +83,10 @@ export async function GET(request: NextRequest) {
         mode: "safe-session-protected-review-list",
         count: 0,
         items: [],
-        message: error instanceof Error ? error.message : "Erro desconhecido ao consultar a fila.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao consultar a fila.",
       },
       { status: error instanceof ValidationError ? 400 : 500 },
     );

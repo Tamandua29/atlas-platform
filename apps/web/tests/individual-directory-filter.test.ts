@@ -27,12 +27,18 @@ const individuals: FilterableIndividual[] = [
 
 describe("filtros do diretório de indivíduos", () => {
   it("busca nome sem depender de acentuação", () => {
-    expect(filterIndividualDirectory(individuals, "joao", "all")).toHaveLength(1);
+    expect(filterIndividualDirectory(individuals, "joao", "all")).toHaveLength(
+      1,
+    );
   });
 
   it("separa atenção judicial de ausência documental", () => {
-    expect(filterIndividualDirectory(individuals, "", "judicial-attention")).toEqual([individuals[0]]);
-    expect(filterIndividualDirectory(individuals, "", "documents-missing")).toEqual([individuals[1]]);
+    expect(
+      filterIndividualDirectory(individuals, "", "judicial-attention"),
+    ).toEqual([individuals[0]]);
+    expect(
+      filterIndividualDirectory(individuals, "", "documents-missing"),
+    ).toEqual([individuals[1]]);
   });
 
   it("não transforma ausência de vínculo em risco", () => {

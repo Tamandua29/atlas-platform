@@ -1,3 +1,1 @@
-export {
-  InMemoryEventBus,
-} from "./in-memory-event-bus";
+export { InMemoryEventBus } from "./in-memory-event-bus";

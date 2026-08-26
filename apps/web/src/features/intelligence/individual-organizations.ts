@@ -49,12 +49,7 @@ const linkFields = [
   "Registro Ativo",
 ];
 
-const organizationFields = [
-  "Nome da Organização",
-  "Sigla",
-  "Tipo",
-  "Situação",
-];
+const organizationFields = ["Nome da Organização", "Sigla", "Tipo", "Situação"];
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -112,18 +107,25 @@ export async function listOrganizationsForIndividual(
       return {
         linkRecordId: record.id,
         organizationRecordId,
-        name: text(organization["Nome da Organização"]) || "Organização não identificada",
+        name:
+          text(organization["Nome da Organização"]) ||
+          "Organização não identificada",
         acronym: text(organization.Sigla) || null,
         organizationType: text(organization.Tipo) || null,
         organizationStatus: text(organization.Situação) || null,
         role: text(record.fields["Função ou Posição"]) || null,
         relationshipType: text(record.fields["Tipo de Vínculo"]) || null,
-        informationStatus: text(record.fields["Situação da Informação"]) || null,
+        informationStatus:
+          text(record.fields["Situação da Informação"]) || null,
         source: text(record.fields.Fonte) || null,
         confidence: text(record.fields.Confiabilidade) || null,
-        verificationStatus: text(record.fields["Situação da Verificação"]) || null,
+        verificationStatus:
+          text(record.fields["Situação da Verificação"]) || null,
       };
     })
-    .filter((organization): organization is IndividualOrganization => organization !== null)
+    .filter(
+      (organization): organization is IndividualOrganization =>
+        organization !== null,
+    )
     .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
 }

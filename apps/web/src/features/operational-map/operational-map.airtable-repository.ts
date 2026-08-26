@@ -607,9 +607,7 @@ function buildOccurrenceTitle(occurrence: AirtableOccurrenceFields): string {
   return "Ocorrência operacional";
 }
 
-function isExplicitPointOfSale(
-  occurrence: AirtableOccurrenceFields,
-): boolean {
+function isExplicitPointOfSale(occurrence: AirtableOccurrenceFields): boolean {
   const explicitClassification = [occurrence.Natureza, occurrence.Categoria]
     .map((value) =>
       normalizeText(value)
@@ -698,7 +696,9 @@ function mapOccurrenceToEntity(
   return {
     id: occurrenceRecord.id,
     type: isPointOfSale ? "point-of-sale" : "occurrence",
-    title: isPointOfSale ? "Ponto de venda sinalizado" : buildOccurrenceTitle(occurrence),
+    title: isPointOfSale
+      ? "Ponto de venda sinalizado"
+      : buildOccurrenceTitle(occurrence),
     description: isPointOfSale
       ? "Classificação explícita na fonte; requer validação humana."
       : buildOccurrenceDescription(occurrence),

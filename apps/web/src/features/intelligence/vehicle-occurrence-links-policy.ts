@@ -10,10 +10,7 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function firstText(
-  fields: Record<string, unknown>,
-  names: string[],
-): string {
+function firstText(fields: Record<string, unknown>, names: string[]): string {
   for (const name of names) {
     const value = text(fields[name]);
     if (value) return value;
@@ -41,16 +38,24 @@ export function maskOccurrenceNumber(value: unknown): string {
   return `${normalized.slice(0, 3)}${"•".repeat(Math.min(8, normalized.length - 6))}${normalized.slice(-3)}`;
 }
 
-export function toSafeVehicleOccurrence(
-  record: { id: string; fields: Record<string, unknown> },
-): SafeVehicleOccurrence {
+export function toSafeVehicleOccurrence(record: {
+  id: string;
+  fields: Record<string, unknown>;
+}): SafeVehicleOccurrence {
   return {
     recordId: record.id,
     maskedOccurrenceNumber: maskOccurrenceNumber(
-      firstText(record.fields, ["Número da Ocorrência", "Número", "Referência"]),
+      firstText(record.fields, [
+        "Número da Ocorrência",
+        "Número",
+        "Referência",
+      ]),
     ),
-    occurredAt: firstText(record.fields, ["Data e Hora", "Data", "Data da Ocorrência"]) || null,
-    category: firstText(record.fields, ["Categoria", "Natureza", "Tipo"]) || null,
+    occurredAt:
+      firstText(record.fields, ["Data e Hora", "Data", "Data da Ocorrência"]) ||
+      null,
+    category:
+      firstText(record.fields, ["Categoria", "Natureza", "Tipo"]) || null,
     status: firstText(record.fields, ["Situação", "Status"]) || null,
   };
 }

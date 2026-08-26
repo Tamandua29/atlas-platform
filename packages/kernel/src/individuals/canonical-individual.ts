@@ -41,140 +41,68 @@ export class CanonicalIndividual {
   readonly sources: readonly SourceRecordReference[];
   readonly createdAt: Date;
 
-  private constructor(
-    input: CanonicalIndividualInput,
-  ) {
-    this.id =
-      input.id ??
-      UniqueEntityId.create();
+  private constructor(input: CanonicalIndividualInput) {
+    this.id = input.id ?? UniqueEntityId.create();
 
-    this.legalName =
-      collapseWhitespace(
-        input.legalName,
-      );
+    this.legalName = collapseWhitespace(input.legalName);
 
-    this.normalizedName =
-      normalizeSearchText(
-        this.legalName,
-      );
+    this.normalizedName = normalizeSearchText(this.legalName);
 
-    this.aliases = Object.freeze(
-      [
-        ...new Set(
-          (input.aliases ?? [])
-            .map(collapseWhitespace)
-            .filter(Boolean),
-        ),
-      ],
-    );
-
-    this.normalizedAliases =
-      Object.freeze(
-        [
-          ...new Set(
-            this.aliases.map(
-              normalizeSearchText,
-            ),
-          ),
-        ].filter(
-          (alias) =>
-            alias !==
-            this.normalizedName,
-        ),
-      );
-
-    this.birthDate =
-      input.birthDate
-        ? new Date(
-            input.birthDate.getTime(),
-          )
-        : undefined;
-
-    this.cpf = normalizeCpf(
-      input.cpf,
-    );
-
-    this.cpfStructurallyValid =
-      this.cpf
-        ? isStructurallyValidCpf(
-            this.cpf,
-          )
-        : false;
-
-    this.identityDocument =
-      normalizeIdentityDocument(
-        input.identityDocument,
-      );
-
-    this.motherName =
-      input.motherName
-        ? collapseWhitespace(
-            input.motherName,
-          ) || undefined
-        : undefined;
-
-    this.normalizedMotherName =
-      this.motherName
-        ? normalizeSearchText(
-            this.motherName,
-          )
-        : undefined;
-
-    this.matchKey =
-      buildIndividualMatchKey({
-        cpf: this.cpf,
-        normalizedName:
-          this.normalizedName,
-        birthDate:
-          this.birthDate,
-        normalizedMotherName:
-          this.normalizedMotherName,
-      });
-
-    this.sources = Object.freeze([
-      input.source,
+    this.aliases = Object.freeze([
+      ...new Set((input.aliases ?? []).map(collapseWhitespace).filter(Boolean)),
     ]);
 
-    this.createdAt = new Date(
-      (
-        input.createdAt ??
-        new Date()
-      ).getTime(),
+    this.normalizedAliases = Object.freeze(
+      [...new Set(this.aliases.map(normalizeSearchText))].filter(
+        (alias) => alias !== this.normalizedName,
+      ),
     );
+
+    this.birthDate = input.birthDate
+      ? new Date(input.birthDate.getTime())
+      : undefined;
+
+    this.cpf = normalizeCpf(input.cpf);
+
+    this.cpfStructurallyValid = this.cpf
+      ? isStructurallyValidCpf(this.cpf)
+      : false;
+
+    this.identityDocument = normalizeIdentityDocument(input.identityDocument);
+
+    this.motherName = input.motherName
+      ? collapseWhitespace(input.motherName) || undefined
+      : undefined;
+
+    this.normalizedMotherName = this.motherName
+      ? normalizeSearchText(this.motherName)
+      : undefined;
+
+    this.matchKey = buildIndividualMatchKey({
+      cpf: this.cpf,
+      normalizedName: this.normalizedName,
+      birthDate: this.birthDate,
+      normalizedMotherName: this.normalizedMotherName,
+    });
+
+    this.sources = Object.freeze([input.source]);
+
+    this.createdAt = new Date((input.createdAt ?? new Date()).getTime());
   }
 
-  static create(
-    input: CanonicalIndividualInput,
-  ): CanonicalIndividual {
-    if (
-      !collapseWhitespace(
-        input.legalName,
-      )
-    ) {
-      throw new ValidationError(
-        "O nome civil do indivíduo é obrigatório.",
-        {
-          field: "legalName",
-        },
-      );
+  static create(input: CanonicalIndividualInput): CanonicalIndividual {
+    if (!collapseWhitespace(input.legalName)) {
+      throw new ValidationError("O nome civil do indivíduo é obrigatório.", {
+        field: "legalName",
+      });
     }
 
-    if (
-      input.birthDate &&
-      Number.isNaN(
-        input.birthDate.getTime(),
-      )
-    ) {
-      throw new ValidationError(
-        "A data de nascimento é inválida.",
-        {
-          field: "birthDate",
-        },
-      );
+    if (input.birthDate && Number.isNaN(input.birthDate.getTime())) {
+      throw new ValidationError("A data de nascimento é inválida.", {
+        field: "birthDate",
+      });
     }
 
-    return new CanonicalIndividual(
-      input,
-    );
+    return new CanonicalIndividual(input);
   }
 }

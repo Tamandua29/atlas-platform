@@ -26,7 +26,15 @@ export type VehicleDirectoryEntry = {
   relationshipType: string | null;
 };
 
-const safeFields = ["Placa", "Marca", "Modelo", "Cor", "Ano", "Situação", "Tipo de Vínculo"];
+const safeFields = [
+  "Placa",
+  "Marca",
+  "Modelo",
+  "Cor",
+  "Ano",
+  "Situação",
+  "Tipo de Vínculo",
+];
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -50,26 +58,32 @@ function mapVehicle(record: {
 
 function validYear(value: unknown): number | null {
   const maximum = new Date().getUTCFullYear() + 1;
-  return typeof value === "number" && Number.isInteger(value) && value >= 1900 && value <= maximum
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1900 &&
+    value <= maximum
     ? value
     : null;
 }
 
-export async function listVehicleDirectory(limit = 100): Promise<VehicleDirectoryEntry[]> {
+export async function listVehicleDirectory(
+  limit = 100,
+): Promise<VehicleDirectoryEntry[]> {
   const configuration = getAirtableConfiguration();
-  const records = await listAllAirtableRecords<VehicleFields>(configuration.vehiclesTableId, {
-    baseId: configuration.individualsPreviewBaseId,
-    fields: safeFields,
-    maxRecords: Math.min(Math.max(limit, 1), 200),
-  });
+  const records = await listAllAirtableRecords<VehicleFields>(
+    configuration.vehiclesTableId,
+    {
+      baseId: configuration.individualsPreviewBaseId,
+      fields: safeFields,
+      maxRecords: Math.min(Math.max(limit, 1), 200),
+    },
+  );
 
-  return records
-    .map(mapVehicle)
-    .sort((left, right) => {
-      const leftDescription = `${left.brand || ""} ${left.model || ""}`;
-      const rightDescription = `${right.brand || ""} ${right.model || ""}`;
-      return leftDescription.localeCompare(rightDescription, "pt-BR");
-    });
+  return records.map(mapVehicle).sort((left, right) => {
+    const leftDescription = `${left.brand || ""} ${left.model || ""}`;
+    const rightDescription = `${right.brand || ""} ${right.model || ""}`;
+    return leftDescription.localeCompare(rightDescription, "pt-BR");
+  });
 }
 
 export async function getVehicleDirectoryEntry(
@@ -78,12 +92,15 @@ export async function getVehicleDirectoryEntry(
   if (!/^rec[a-zA-Z0-9]+$/.test(recordId)) return null;
 
   const configuration = getAirtableConfiguration();
-  const records = await listAllAirtableRecords<VehicleFields>(configuration.vehiclesTableId, {
-    baseId: configuration.individualsPreviewBaseId,
-    fields: safeFields,
-    filterByFormula: `RECORD_ID()='${recordId}'`,
-    maxRecords: 1,
-  });
+  const records = await listAllAirtableRecords<VehicleFields>(
+    configuration.vehiclesTableId,
+    {
+      baseId: configuration.individualsPreviewBaseId,
+      fields: safeFields,
+      filterByFormula: `RECORD_ID()='${recordId}'`,
+      maxRecords: 1,
+    },
+  );
 
   const record = records[0];
   return record ? mapVehicle(record) : null;

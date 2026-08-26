@@ -48,7 +48,8 @@ function text(value: unknown): string {
 function maskOccurrenceNumber(value: unknown): string {
   const normalized = text(value).replace(/\s+/g, "");
   if (!normalized) return "Referência não informada";
-  if (normalized.length <= 6) return `${"•".repeat(Math.max(0, normalized.length - 2))}${normalized.slice(-2)}`;
+  if (normalized.length <= 6)
+    return `${"•".repeat(Math.max(0, normalized.length - 2))}${normalized.slice(-2)}`;
   return `${normalized.slice(0, 3)}${"•".repeat(Math.min(8, normalized.length - 6))}${normalized.slice(-3)}`;
 }
 
@@ -72,14 +73,19 @@ export async function listOccurrencesForIndividual(
     .filter((record) => record.fields.Indivíduos?.includes(individualRecordId))
     .map((record) => ({
       recordId: record.id,
-      maskedOccurrenceNumber: maskOccurrenceNumber(record.fields["Número da Ocorrência"]),
+      maskedOccurrenceNumber: maskOccurrenceNumber(
+        record.fields["Número da Ocorrência"],
+      ),
       occurredAt: text(record.fields["Data e Hora"]) || null,
       nature: text(record.fields.Natureza) || null,
       category: text(record.fields.Categoria) || null,
       status: text(record.fields.Situação) || null,
       source: text(record.fields.Fonte) || null,
       confidence: text(record.fields.Confiabilidade) || null,
-      verificationStatus: text(record.fields["Situação da Verificação"]) || null,
+      verificationStatus:
+        text(record.fields["Situação da Verificação"]) || null,
     }))
-    .sort((left, right) => (right.occurredAt || "").localeCompare(left.occurredAt || ""));
+    .sort((left, right) =>
+      (right.occurredAt || "").localeCompare(left.occurredAt || ""),
+    );
 }
