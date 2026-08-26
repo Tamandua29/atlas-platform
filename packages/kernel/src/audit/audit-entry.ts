@@ -1,10 +1,7 @@
 import { ValidationError } from "../errors/application-error";
 import { UniqueEntityId } from "../identifiers/unique-entity-id";
 
-export type AuditOutcome =
-  | "success"
-  | "partial"
-  | "failure";
+export type AuditOutcome = "success" | "partial" | "failure";
 
 export type AuditEntryInput = {
   readonly action: string;
@@ -54,9 +51,7 @@ export class AuditEntry {
     this.action = input.action.trim();
     this.outcome = input.outcome;
     this.occurredAt = new Date(input.occurredAt);
-    this.correlationId =
-      input.correlationId?.trim() ||
-      this.id.value;
+    this.correlationId = input.correlationId?.trim() || this.id.value;
     this.processedCount = input.processedCount ?? 0;
     this.successCount = input.successCount ?? 0;
     this.failureCount = input.failureCount ?? 0;
@@ -74,8 +69,15 @@ export class AuditEntry {
       input.failureCount,
     ];
 
-    if (counts.some((value) => value !== undefined && (!Number.isInteger(value) || value < 0))) {
-      throw new ValidationError("As contagens de auditoria devem ser inteiros não negativos.");
+    if (
+      counts.some(
+        (value) =>
+          value !== undefined && (!Number.isInteger(value) || value < 0),
+      )
+    ) {
+      throw new ValidationError(
+        "As contagens de auditoria devem ser inteiros não negativos.",
+      );
     }
 
     const sensitiveKey = Object.keys(input.metadata ?? {}).find(
@@ -83,9 +85,12 @@ export class AuditEntry {
     );
 
     if (sensitiveKey) {
-      throw new ValidationError("Metadado sensível não pode ser registrado na auditoria.", {
-        field: sensitiveKey,
-      });
+      throw new ValidationError(
+        "Metadado sensível não pode ser registrado na auditoria.",
+        {
+          field: sensitiveKey,
+        },
+      );
     }
 
     return new AuditEntry(input);

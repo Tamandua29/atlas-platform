@@ -1,7 +1,4 @@
-type MapStatus =
-  | "loading"
-  | "ready"
-  | "error";
+type MapStatus = "loading" | "ready" | "error";
 
 type MapStatusOverlaysProps = {
   status: MapStatus;
@@ -64,35 +61,30 @@ export function MapStatusOverlays({
         </div>
       )}
 
-      {status === "ready" &&
-        isEmpty && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
-            <div className="max-w-sm rounded-2xl border border-slate-700 bg-slate-950/90 p-6 text-center shadow-2xl backdrop-blur">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-lg text-cyan-300">
-                0
-              </div>
-
-              <p className="mt-4 font-semibold text-white">
-                Nenhum registro georreferenciado
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                O SIO não retornou registros com
-                latitude e longitude válidas para
-                exibição no mapa.
-              </p>
+      {status === "ready" && isEmpty && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
+          <div className="max-w-sm rounded-2xl border border-slate-700 bg-slate-950/90 p-6 text-center shadow-2xl backdrop-blur">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-lg text-cyan-300">
+              0
             </div>
-          </div>
-        )}
 
-      {status === "ready" &&
-        !isEmpty &&
-        !hasSelectedEntity && (
-          <div className="pointer-events-none absolute bottom-4 right-4 z-10 rounded-lg border border-slate-700 bg-slate-950/85 px-3 py-2 text-xs text-slate-300 shadow-lg backdrop-blur">
-            Clique em um marcador para consultar
-            os detalhes
+            <p className="mt-4 font-semibold text-white">
+              Nenhum registro georreferenciado
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              O SIO não retornou registros com latitude e longitude válidas para
+              exibição no mapa.
+            </p>
           </div>
-        )}
+        </div>
+      )}
+
+      {status === "ready" && !isEmpty && !hasSelectedEntity && (
+        <div className="pointer-events-none absolute bottom-4 right-4 z-10 rounded-lg border border-slate-700 bg-slate-950/85 px-3 py-2 text-xs text-slate-300 shadow-lg backdrop-blur">
+          Clique em um marcador para consultar os detalhes
+        </div>
+      )}
     </>
   );
 }

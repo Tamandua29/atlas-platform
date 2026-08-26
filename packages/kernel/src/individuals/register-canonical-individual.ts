@@ -24,18 +24,12 @@ export type RegisterCanonicalIndividualOutput = {
   readonly created: boolean;
 };
 
-function parseBirthDate(
-  value?: string,
-): Date | undefined {
+function parseBirthDate(value?: string): Date | undefined {
   if (!value) {
     return undefined;
   }
 
-  if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(
-      value,
-    )
-  ) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new ValidationError(
       "A data de nascimento deve usar o formato AAAA-MM-DD.",
       {
@@ -45,23 +39,16 @@ function parseBirthDate(
     );
   }
 
-  const date = new Date(
-    `${value}T00:00:00.000Z`,
-  );
+  const date = new Date(`${value}T00:00:00.000Z`);
 
   if (
     Number.isNaN(date.getTime()) ||
-    date
-      .toISOString()
-      .slice(0, 10) !== value
+    date.toISOString().slice(0, 10) !== value
   ) {
-    throw new ValidationError(
-      "A data de nascimento é inválida.",
-      {
-        field: "birthDate",
-        value,
-      },
-    );
+    throw new ValidationError("A data de nascimento é inválida.", {
+      field: "birthDate",
+      value,
+    });
   }
 
   return date;
@@ -69,28 +56,21 @@ function parseBirthDate(
 
 export class RegisterCanonicalIndividual {
   constructor(
-    private readonly repository:
-      CanonicalIndividualRepository,
+    private readonly repository: CanonicalIndividualRepository,
     private readonly clock: Clock,
   ) {}
 
   async execute(
     input: RegisterCanonicalIndividualInput,
   ): Promise<RegisterCanonicalIndividualOutput> {
-    const timestamp =
-      this.clock.now();
+    const timestamp = this.clock.now();
 
-    const source =
-      SourceRecordReference.create({
-        ...input.source,
-        importedAt: timestamp,
-      });
+    const source = SourceRecordReference.create({
+      ...input.source,
+      importedAt: timestamp,
+    });
 
-    const existing =
-      await this.repository
-        .findBySourceKey(
-          source.key,
-        );
+    const existing = await this.repository.findBySourceKey(source.key);
 
     if (existing) {
       return {
@@ -99,25 +79,18 @@ export class RegisterCanonicalIndividual {
       };
     }
 
-    const individual =
-      CanonicalIndividual.create({
-        legalName: input.legalName,
-        aliases: input.aliases,
-        birthDate: parseBirthDate(
-          input.birthDate,
-        ),
-        cpf: input.cpf,
-        identityDocument:
-          input.identityDocument,
-        motherName:
-          input.motherName,
-        source,
-        createdAt: timestamp,
-      });
+    const individual = CanonicalIndividual.create({
+      legalName: input.legalName,
+      aliases: input.aliases,
+      birthDate: parseBirthDate(input.birthDate),
+      cpf: input.cpf,
+      identityDocument: input.identityDocument,
+      motherName: input.motherName,
+      source,
+      createdAt: timestamp,
+    });
 
-    await this.repository.save(
-      individual,
-    );
+    await this.repository.save(individual);
 
     return {
       individual,

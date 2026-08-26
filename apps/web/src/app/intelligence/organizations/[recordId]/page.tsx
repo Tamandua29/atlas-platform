@@ -17,7 +17,9 @@ export default async function OrganizationProfilePage({
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
               Atlas Intelligence Platform
             </p>
-            <h1 className="mt-1 text-xl font-semibold">Ficha organizacional protegida</h1>
+            <h1 className="mt-1 text-xl font-semibold">
+              Ficha organizacional protegida
+            </h1>
           </div>
           <Link
             href="/intelligence/organizations"

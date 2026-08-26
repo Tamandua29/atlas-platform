@@ -79,15 +79,7 @@ export function useOperationalHeatmap({
           15,
           1.8,
         ],
-        "heatmap-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          9,
-          18,
-          15,
-          42,
-        ],
+        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 9, 18, 15, 42],
         "heatmap-opacity": [
           "interpolate",
           ["linear"],
@@ -121,15 +113,7 @@ export function useOperationalHeatmap({
       source: SOURCE_ID,
       minzoom: 14,
       paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          14,
-          3,
-          17,
-          7,
-        ],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 3, 17, 7],
         "circle-color": "#fb923c",
         "circle-opacity": [
           "interpolate",

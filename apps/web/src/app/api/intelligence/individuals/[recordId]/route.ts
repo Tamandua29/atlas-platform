@@ -69,39 +69,42 @@ export async function GET(
       personalRelationships,
     });
 
-    const relationshipCount = addresses.length
-      + phones.length
-      + vehicles.length
-      + warrants.length
-      + photos.length
-      + occurrences.length
-      + organizations.length
-      + personalRelationships.length
-      + documents.length;
+    const relationshipCount =
+      addresses.length +
+      phones.length +
+      vehicles.length +
+      warrants.length +
+      photos.length +
+      occurrences.length +
+      organizations.length +
+      personalRelationships.length +
+      documents.length;
 
-    const auditPersisted = await persistAuditSafely(AuditEntry.create({
-      action: "intelligence.individuals.profile",
-      outcome: "success",
-      occurredAt: new Date(),
-      correlationId,
-      processedCount: 1 + relationshipCount,
-      successCount: 1 + relationshipCount,
-      metadata: {
-        actorId: authorization.session.actorId,
-        actorRole: authorization.session.role,
-        addressCount: addresses.length,
-        phoneCount: phones.length,
-        vehicleCount: vehicles.length,
-        warrantCount: warrants.length,
-        photoCount: photos.length,
-        occurrenceCount: occurrences.length,
-        organizationCount: organizations.length,
-        personalRelationshipCount: personalRelationships.length,
-        linkedFileCount: documents.length,
-        timelineEventCount: timeline.length,
-        mode: "protected-individual-profile",
-      },
-    }));
+    const auditPersisted = await persistAuditSafely(
+      AuditEntry.create({
+        action: "intelligence.individuals.profile",
+        outcome: "success",
+        occurredAt: new Date(),
+        correlationId,
+        processedCount: 1 + relationshipCount,
+        successCount: 1 + relationshipCount,
+        metadata: {
+          actorId: authorization.session.actorId,
+          actorRole: authorization.session.role,
+          addressCount: addresses.length,
+          phoneCount: phones.length,
+          vehicleCount: vehicles.length,
+          warrantCount: warrants.length,
+          photoCount: photos.length,
+          occurrenceCount: occurrences.length,
+          organizationCount: organizations.length,
+          personalRelationshipCount: personalRelationships.length,
+          linkedFileCount: documents.length,
+          timelineEventCount: timeline.length,
+          mode: "protected-individual-profile",
+        },
+      }),
+    );
 
     return NextResponse.json(
       {
@@ -126,7 +129,11 @@ export async function GET(
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, correlationId, message: error instanceof Error ? error.message : "Erro desconhecido." },
+      {
+        success: false,
+        correlationId,
+        message: error instanceof Error ? error.message : "Erro desconhecido.",
+      },
       { status: 500 },
     );
   }

@@ -1,9 +1,6 @@
 import "server-only";
 
-import {
-  isStructurallyValidCpf,
-  normalizeCpf,
-} from "@atlas/kernel";
+import { isStructurallyValidCpf, normalizeCpf } from "@atlas/kernel";
 
 import { listAllAirtableRecords } from "@/lib/airtable/airtable.client";
 import { getAirtableConfiguration } from "@/lib/airtable/airtable.config";
@@ -67,10 +64,11 @@ function maskDigits(value: string | undefined): string | null {
 
 function secret(): string {
   const value =
-    process.env.ATLAS_SESSION_SECRET?.trim()
-    || process.env.ATLAS_INTERNAL_API_KEY?.trim();
+    process.env.ATLAS_SESSION_SECRET?.trim() ||
+    process.env.ATLAS_INTERNAL_API_KEY?.trim();
 
-  if (!value) throw new Error("O segredo de referência protegida não foi configurado.");
+  if (!value)
+    throw new Error("O segredo de referência protegida não foi configurado.");
   return value;
 }
 
@@ -124,7 +122,9 @@ function analyze(fields: QualityQueueFields): {
   const hasCpf = present(fields.CPF);
   const hasIdentityDocument = present(fields["Registro Geral"]);
   const normalizedCpf = normalizeCpf(fields.CPF);
-  const cpfValid = normalizedCpf ? isStructurallyValidCpf(normalizedCpf) : false;
+  const cpfValid = normalizedCpf
+    ? isStructurallyValidCpf(normalizedCpf)
+    : false;
   const issues: string[] = [];
 
   if (!hasName) issues.push("Nome completo ausente");
@@ -136,19 +136,27 @@ function analyze(fields: QualityQueueFields): {
   if (issues.length === 0) return null;
 
   return {
-    priority: !hasName || (hasCpf && !cpfValid)
-      ? "critical"
-      : !hasBirthDate || !hasMotherName
-        ? "high"
-        : "medium",
+    priority:
+      !hasName || (hasCpf && !cpfValid)
+        ? "critical"
+        : !hasBirthDate || !hasMotherName
+          ? "high"
+          : "medium",
     issues,
-    fieldsPresent: [hasName, hasBirthDate, hasMotherName, hasCpf, hasIdentityDocument]
-      .filter(Boolean).length,
+    fieldsPresent: [
+      hasName,
+      hasBirthDate,
+      hasMotherName,
+      hasCpf,
+      hasIdentityDocument,
+    ].filter(Boolean).length,
     cpfValid,
   };
 }
 
-export async function listSafeIndividualQualityQueue(): Promise<SafeQualityQueueItem[]> {
+export async function listSafeIndividualQualityQueue(): Promise<
+  SafeQualityQueueItem[]
+> {
   const records = await loadRecords();
   const items: SafeQualityQueueItem[] = [];
   const priorityOrder: Record<QualityPriority, number> = {
@@ -172,7 +180,8 @@ export async function listSafeIndividualQualityQueue(): Promise<SafeQualityQueue
   }
 
   return items.sort((left, right) => {
-    const difference = priorityOrder[left.priority] - priorityOrder[right.priority];
+    const difference =
+      priorityOrder[left.priority] - priorityOrder[right.priority];
     return difference !== 0
       ? difference
       : left.maskedName.localeCompare(right.maskedName, "pt-BR");
@@ -185,7 +194,7 @@ export async function resolveIndividualQualityCorrectionTarget(
   const records = await loadRecords();
 
   for (const record of records) {
-    if (await queueIdFor(record.id) !== queueId) continue;
+    if ((await queueIdFor(record.id)) !== queueId) continue;
     const analysis = analyze(record.fields);
 
     return analysis
@@ -202,7 +211,7 @@ export async function getProtectedIndividualQualityDetail(
   const records = await loadRecords();
 
   for (const record of records) {
-    if (await queueIdFor(record.id) !== queueId) continue;
+    if ((await queueIdFor(record.id)) !== queueId) continue;
     const analysis = analyze(record.fields);
     if (!analysis) return null;
 

@@ -24,12 +24,14 @@ export function filterOrganizationDirectory<T extends FilterableOrganization>(
   const search = normalized(query);
 
   return organizations.filter((organization) => {
-    const matchesSearch = !search || [
-      organization.name,
-      organization.acronym || "",
-      organization.organizationType || "",
-      organization.organizationStatus || "",
-    ].some((value) => normalized(value).includes(search));
+    const matchesSearch =
+      !search ||
+      [
+        organization.name,
+        organization.acronym || "",
+        organization.organizationType || "",
+        organization.organizationStatus || "",
+      ].some((value) => normalized(value).includes(search));
 
     if (!matchesSearch) return false;
     if (filter === "linked") return organization.explicitLinkCount > 0;

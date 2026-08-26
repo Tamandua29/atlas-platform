@@ -37,7 +37,9 @@ export async function requestIndividualDataCorrection(input: {
   const target = await resolveIndividualQualityCorrectionTarget(input.queueId);
 
   if (!target) {
-    throw new Error("O item de saneamento não foi encontrado ou já não possui pendências.");
+    throw new Error(
+      "O item de saneamento não foi encontrado ou já não possui pendências.",
+    );
   }
 
   const idempotencyKey = `quality-correction:${input.queueId}`;
@@ -46,8 +48,7 @@ export async function requestIndividualDataCorrection(input: {
     {
       baseId: configuration.individualsPreviewBaseId,
       fields: ["ID Revisão", "Chave Idempotente do Saneamento", "Situação"],
-      filterByFormula:
-        `AND({Chave Idempotente do Saneamento}='${escapeFormulaValue(idempotencyKey)}',OR({Situação}='Aberta',{Situação}='Em andamento'))`,
+      filterByFormula: `AND({Chave Idempotente do Saneamento}='${escapeFormulaValue(idempotencyKey)}',OR({Situação}='Aberta',{Situação}='Em andamento'))`,
       maxRecords: 1,
     },
   );

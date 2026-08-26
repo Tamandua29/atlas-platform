@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
-type ComparisonState =
-  | "match"
-  | "different"
-  | "missing";
+type ComparisonState = "match" | "different" | "missing";
 
 type ComparisonRecord = {
   sourceRecordId: string;
@@ -17,8 +11,7 @@ type ComparisonRecord = {
   birthDate: string | null;
   motherName: string | null;
   maskedCpf: string | null;
-  maskedIdentityDocument:
-    string | null;
+  maskedIdentityDocument: string | null;
 };
 
 type ComparisonPayload = {
@@ -30,19 +23,14 @@ type ComparisonPayload = {
     reviewId: string;
     status: string;
     decision: string;
-    records:
-      ComparisonRecord[];
+    records: ComparisonRecord[];
     comparison: {
-      legalName:
-        ComparisonState;
+      legalName: ComparisonState;
       alias: ComparisonState;
-      birthDate:
-        ComparisonState;
-      motherName:
-        ComparisonState;
+      birthDate: ComparisonState;
+      motherName: ComparisonState;
       cpf: ComparisonState;
-      identityDocument:
-        ComparisonState;
+      identityDocument: ComparisonState;
     };
   };
 };
@@ -50,8 +38,7 @@ type ComparisonPayload = {
 type ReviewSummary = {
   recordId: string;
   reviewId: string;
-  status:
-    "open" | "completed";
+  status: "open" | "completed";
 };
 
 type Props = {
@@ -62,33 +49,24 @@ type Props = {
 const fieldLabels = {
   legalName: "Nome completo",
   alias: "Vulgo principal",
-  birthDate:
-    "Data de nascimento",
+  birthDate: "Data de nascimento",
   motherName: "Filiação materna",
   maskedCpf: "CPF mascarado",
-  maskedIdentityDocument:
-    "RG mascarado",
+  maskedIdentityDocument: "RG mascarado",
 } as const;
 
-const stateLabels: Record<
-  ComparisonState,
-  string
-> = {
+const stateLabels: Record<ComparisonState, string> = {
   match: "Coincide",
   different: "Diverge",
   missing: "Ausente",
 };
 
-function badgeClasses(
-  state: ComparisonState,
-): string {
+function badgeClasses(state: ComparisonState): string {
   if (state === "match") {
     return "border-emerald-400/25 bg-emerald-400/10 text-emerald-200";
   }
 
-  if (
-    state === "different"
-  ) {
+  if (state === "different") {
     return "border-rose-400/25 bg-rose-400/10 text-rose-200";
   }
 
@@ -96,56 +74,31 @@ function badgeClasses(
 }
 
 function comparisonStateForField(
-  comparison:
-    NonNullable<
-      ComparisonPayload[
-        "comparison"
-      ]
-    >["comparison"],
-  field:
-    keyof typeof fieldLabels,
+  comparison: NonNullable<ComparisonPayload["comparison"]>["comparison"],
+  field: keyof typeof fieldLabels,
 ): ComparisonState {
-  if (
-    field === "maskedCpf"
-  ) {
+  if (field === "maskedCpf") {
     return comparison.cpf;
   }
 
-  if (
-    field ===
-    "maskedIdentityDocument"
-  ) {
-    return comparison
-      .identityDocument;
+  if (field === "maskedIdentityDocument") {
+    return comparison.identityDocument;
   }
 
   return comparison[field];
 }
 
-function displayValue(
-  value: string | null,
-): string {
+function displayValue(value: string | null): string {
   return value || "Não informado";
 }
 
-export function ReviewComparisonPanel({
-  review,
-  onClose,
-}: Props) {
-  const [payload, setPayload] =
-    useState<
-      ComparisonPayload[
-        "comparison"
-      ] | null
-    >(null);
-  const [loading, setLoading] =
-    useState(true);
-  const [error, setError] =
-    useState("");
-  const [
-    auditPersisted,
-    setAuditPersisted,
-  ] = useState(false);
+export function ReviewComparisonPanel({ review, onClose }: Props) {
+  const [payload, setPayload] = useState<
+    ComparisonPayload["comparison"] | null
+  >(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [auditPersisted, setAuditPersisted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,46 +108,29 @@ export function ReviewComparisonPanel({
       setError("");
 
       try {
-        const response =
-          await fetch(
-            `/api/canonical-individuals/review-queue/${review.recordId}/comparison`,
-            {
-              cache:
-                "no-store",
-            },
-          );
+        const response = await fetch(
+          `/api/canonical-individuals/review-queue/${review.recordId}/comparison`,
+          {
+            cache: "no-store",
+          },
+        );
 
-        const result =
-          (await response.json()) as
-            ComparisonPayload;
+        const result = (await response.json()) as ComparisonPayload;
 
-        if (
-          !response.ok ||
-          !result.success ||
-          !result.comparison
-        ) {
+        if (!response.ok || !result.success || !result.comparison) {
           throw new Error(
-            result.message ??
-              "Não foi possível abrir a comparação.",
+            result.message ?? "Não foi possível abrir a comparação.",
           );
         }
 
         if (!cancelled) {
-          setPayload(
-            result.comparison,
-          );
-          setAuditPersisted(
-            result.auditPersisted ??
-              false,
-          );
+          setPayload(result.comparison);
+          setAuditPersisted(result.auditPersisted ?? false);
         }
       } catch (caught) {
         if (!cancelled) {
           setError(
-            caught instanceof
-            Error
-              ? caught.message
-              : "Falha desconhecida.",
+            caught instanceof Error ? caught.message : "Falha desconhecida.",
           );
         }
       } finally {
@@ -209,9 +145,7 @@ export function ReviewComparisonPanel({
     return () => {
       cancelled = true;
     };
-  }, [
-    review.recordId,
-  ]);
+  }, [review.recordId]);
 
   return (
     <section className="mt-6 overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#0a1020]">
@@ -226,7 +160,8 @@ export function ReviewComparisonPanel({
           </h3>
 
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Visualização temporária e auditada. Documentos permanecem mascarados e nenhuma alteração será executada.
+            Visualização temporária e auditada. Documentos permanecem mascarados
+            e nenhuma alteração será executada.
           </p>
         </div>
 
@@ -261,108 +196,68 @@ export function ReviewComparisonPanel({
       ) : payload ? (
         <div className="p-5 md:p-6">
           <div className="mb-5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <span className="font-mono text-slate-300">
-              {payload.reviewId}
-            </span>
+            <span className="font-mono text-slate-300">{payload.reviewId}</span>
             <span>•</span>
-            <span>
-              {payload.status}
-            </span>
+            <span>{payload.status}</span>
             <span>•</span>
-            <span>
-              Decisão:{" "}
-              {payload.decision}
-            </span>
+            <span>Decisão: {payload.decision}</span>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
-            {payload.records.map(
-              (
-                record,
-                index,
-              ) => (
-                <article
-                  key={
-                    record.sourceRecordId
-                  }
-                  className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/45"
-                >
-                  <div className="border-b border-slate-800 px-5 py-4">
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-600">
-                      Registro{" "}
-                      {index + 1}
-                    </p>
-                    <p className="mt-1 font-mono text-xs text-slate-400">
-                      {
-                        record.sourceRecordId
-                      }
-                    </p>
-                  </div>
+            {payload.records.map((record, index) => (
+              <article
+                key={record.sourceRecordId}
+                className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/45"
+              >
+                <div className="border-b border-slate-800 px-5 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-slate-600">
+                    Registro {index + 1}
+                  </p>
+                  <p className="mt-1 font-mono text-xs text-slate-400">
+                    {record.sourceRecordId}
+                  </p>
+                </div>
 
-                  <dl className="divide-y divide-slate-800">
-                    {(
-                      Object.keys(
-                        fieldLabels,
-                      ) as Array<
-                        keyof typeof fieldLabels
+                <dl className="divide-y divide-slate-800">
+                  {(
+                    Object.keys(fieldLabels) as Array<keyof typeof fieldLabels>
+                  ).map((field) => {
+                    const state = comparisonStateForField(
+                      payload.comparison,
+                      field,
+                    );
+
+                    return (
+                      <div
+                        key={field}
+                        className="grid gap-2 px-5 py-4 sm:grid-cols-[150px_1fr_auto] sm:items-center"
                       >
-                    ).map(
-                      (field) => {
-                        const state =
-                          comparisonStateForField(
-                            payload.comparison,
-                            field,
-                          );
-
-                        return (
-                          <div
-                            key={
-                              field
-                            }
-                            className="grid gap-2 px-5 py-4 sm:grid-cols-[150px_1fr_auto] sm:items-center"
-                          >
-                            <dt className="text-xs text-slate-600">
-                              {
-                                fieldLabels[
-                                  field
-                                ]
-                              }
-                            </dt>
-                            <dd className="text-sm text-slate-200">
-                              {displayValue(
-                                record[
-                                  field
-                                ],
-                              )}
-                            </dd>
-                            <span
-                              className={[
-                                "w-fit rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
-                                badgeClasses(
-                                  state,
-                                ),
-                              ].join(
-                                " ",
-                              )}
-                            >
-                              {
-                                stateLabels[
-                                  state
-                                ]
-                              }
-                            </span>
-                          </div>
-                        );
-                      },
-                    )}
-                  </dl>
-                </article>
-              ),
-            )}
+                        <dt className="text-xs text-slate-600">
+                          {fieldLabels[field]}
+                        </dt>
+                        <dd className="text-sm text-slate-200">
+                          {displayValue(record[field])}
+                        </dd>
+                        <span
+                          className={[
+                            "w-fit rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
+                            badgeClasses(state),
+                          ].join(" ")}
+                        >
+                          {stateLabels[state]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </article>
+            ))}
           </div>
 
           <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs leading-5 text-amber-100/80">
-            Coincidência indica equivalência entre os valores consultados, não confirmação definitiva de identidade. A conclusão continua sendo responsabilidade do revisor humano.
+            Coincidência indica equivalência entre os valores consultados, não
+            confirmação definitiva de identidade. A conclusão continua sendo
+            responsabilidade do revisor humano.
           </div>
         </div>
       ) : null}

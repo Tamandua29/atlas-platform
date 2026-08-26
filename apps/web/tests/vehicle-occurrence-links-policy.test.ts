@@ -7,8 +7,12 @@ import {
 
 describe("vehicle occurrence links policy", () => {
   it("reconhece somente vínculos explícitos em campos relacionados", () => {
-    expect(recordLinksToVehicle({ Veículos: ["recVehicle01"] }, "recVehicle01")).toBe(true);
-    expect(recordLinksToVehicle({ Observação: "recVehicle01" }, "recVehicle01")).toBe(false);
+    expect(
+      recordLinksToVehicle({ Veículos: ["recVehicle01"] }, "recVehicle01"),
+    ).toBe(true);
+    expect(
+      recordLinksToVehicle({ Observação: "recVehicle01" }, "recVehicle01"),
+    ).toBe(false);
   });
 
   it("expõe apenas metadados mínimos e mascara a referência", () => {

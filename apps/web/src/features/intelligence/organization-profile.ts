@@ -61,7 +61,9 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export async function getOrganizationProfile(recordId: string): Promise<OrganizationProfile | null> {
+export async function getOrganizationProfile(
+  recordId: string,
+): Promise<OrganizationProfile | null> {
   const configuration = getAirtableConfiguration();
   const organizations = await listAllAirtableRecords<OrganizationFields>(
     configuration.organizationsTableId,
@@ -88,14 +90,19 @@ export async function getOrganizationProfile(recordId: string): Promise<Organiza
       link.fields["Registro Ativo"] !== false &&
       (link.fields.Organização || []).includes(recordId),
   );
-  const individualIds = new Set(links.flatMap((link) => link.fields.Indivíduo || []));
+  const individualIds = new Set(
+    links.flatMap((link) => link.fields.Indivíduo || []),
+  );
 
   const individuals = individualIds.size
-    ? await listAllAirtableRecords<IndividualFields>(configuration.individualsTableId, {
-        baseId: configuration.individualsPreviewBaseId,
-        fields: individualFields,
-        maxRecords: 500,
-      })
+    ? await listAllAirtableRecords<IndividualFields>(
+        configuration.individualsTableId,
+        {
+          baseId: configuration.individualsPreviewBaseId,
+          fields: individualFields,
+          maxRecords: 500,
+        },
+      )
     : [];
   const individualsById = new Map(
     individuals
@@ -107,25 +114,34 @@ export async function getOrganizationProfile(recordId: string): Promise<Organiza
     (link.fields.Indivíduo || []).flatMap((individualRecordId) => {
       const individual = individualsById.get(individualRecordId);
       if (!individual) return [];
-      return [{
-        linkRecordId: link.id,
-        individualRecordId,
-        legalName: text(individual.fields["Nome Completo"]) || "Nome protegido",
-        alias: text(individual.fields["Vulgo Principal"]) || null,
-        role: text(link.fields["Função ou Posição"]) || null,
-        relationshipType: text(link.fields["Tipo de Vínculo"]) || null,
-        informationStatus: text(link.fields["Situação da Informação"]) || null,
-        verificationStatus: text(link.fields["Situação da Verificação"]) || null,
-      }];
+      return [
+        {
+          linkRecordId: link.id,
+          individualRecordId,
+          legalName:
+            text(individual.fields["Nome Completo"]) || "Nome protegido",
+          alias: text(individual.fields["Vulgo Principal"]) || null,
+          role: text(link.fields["Função ou Posição"]) || null,
+          relationshipType: text(link.fields["Tipo de Vínculo"]) || null,
+          informationStatus:
+            text(link.fields["Situação da Informação"]) || null,
+          verificationStatus:
+            text(link.fields["Situação da Verificação"]) || null,
+        },
+      ];
     }),
   );
 
   return {
     recordId: organization.id,
-    name: text(organization.fields["Nome da Organização"]) || "Organização sem nome",
+    name:
+      text(organization.fields["Nome da Organização"]) ||
+      "Organização sem nome",
     acronym: text(organization.fields.Sigla) || null,
     organizationType: text(organization.fields.Tipo) || null,
     organizationStatus: text(organization.fields.Situação) || null,
-    links: profileLinks.sort((left, right) => left.legalName.localeCompare(right.legalName, "pt-BR")),
+    links: profileLinks.sort((left, right) =>
+      left.legalName.localeCompare(right.legalName, "pt-BR"),
+    ),
   };
 }

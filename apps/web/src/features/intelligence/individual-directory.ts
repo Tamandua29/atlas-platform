@@ -68,17 +68,20 @@ function mapIndividual(record: {
     motherName: record.fields.Mãe?.trim() || null,
     cpfPresent: Boolean(record.fields.CPF?.trim()),
     identityDocumentPresent: Boolean(record.fields["Registro Geral"]?.trim()),
-    mainPhoto: attachment?.url ? {
-      id: attachment.id || `main-${record.id}`,
-      url: attachment.url,
-      thumbnailUrl: attachment.thumbnails?.large?.url
-        || attachment.thumbnails?.full?.url
-        || attachment.thumbnails?.small?.url
-        || attachment.url,
-      filename: attachment.filename || null,
-      width: attachment.width || null,
-      height: attachment.height || null,
-    } : null,
+    mainPhoto: attachment?.url
+      ? {
+          id: attachment.id || `main-${record.id}`,
+          url: attachment.url,
+          thumbnailUrl:
+            attachment.thumbnails?.large?.url ||
+            attachment.thumbnails?.full?.url ||
+            attachment.thumbnails?.small?.url ||
+            attachment.url,
+          filename: attachment.filename || null,
+          width: attachment.width || null,
+          height: attachment.height || null,
+        }
+      : null,
     createdAt: record.createdTime,
   };
 }

@@ -7,8 +7,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const configured = Boolean(process.env.AIRTABLE_OPERATIONAL_ZONES_TABLE_ID?.trim());
-    const persistedZones = configured ? await loadOperationalZonesFromAirtable() : [];
+    const configured = Boolean(
+      process.env.AIRTABLE_OPERATIONAL_ZONES_TABLE_ID?.trim(),
+    );
+    const persistedZones = configured
+      ? await loadOperationalZonesFromAirtable()
+      : [];
     const useFallback = !configured;
     const zones = useFallback ? DEMO_OPERATIONAL_ZONES : persistedZones;
 
@@ -27,7 +31,10 @@ export async function GET() {
         success: false,
         count: 0,
         zones: [],
-        message: error instanceof Error ? error.message : "Erro desconhecido ao carregar áreas operacionais.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao carregar áreas operacionais.",
       },
       { status: 500 },
     );

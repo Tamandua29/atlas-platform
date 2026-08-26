@@ -47,8 +47,10 @@ function priorityLabel(priority: QualityItem["priority"]): string {
 }
 
 function priorityClasses(priority: QualityItem["priority"]): string {
-  if (priority === "critical") return "border-rose-400/25 bg-rose-400/10 text-rose-200";
-  if (priority === "high") return "border-amber-400/25 bg-amber-400/10 text-amber-200";
+  if (priority === "critical")
+    return "border-rose-400/25 bg-rose-400/10 text-rose-200";
+  if (priority === "high")
+    return "border-amber-400/25 bg-amber-400/10 text-amber-200";
   return "border-cyan-400/25 bg-cyan-400/10 text-cyan-200";
 }
 
@@ -60,7 +62,9 @@ export function QualityQueueClient() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<ProtectedDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [actorRole, setActorRole] = useState<"reviewer" | "auditor" | "administrator" | null>(null);
+  const [actorRole, setActorRole] = useState<
+    "reviewer" | "auditor" | "administrator" | null
+  >(null);
   const [justification, setJustification] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [requestResult, setRequestResult] = useState("");
@@ -71,15 +75,16 @@ export function QualityQueueClient() {
 
     try {
       const [response, sessionResponse] = await Promise.all([
-        fetch(
-          `/api/data-quality/individuals/queue?priority=${nextPriority}`,
-          { cache: "no-store" },
-        ),
+        fetch(`/api/data-quality/individuals/queue?priority=${nextPriority}`, {
+          cache: "no-store",
+        }),
         fetch("/api/auth/session", { cache: "no-store" }),
       ]);
       const payload = (await response.json()) as Payload;
       if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Não foi possível consultar a fila.");
+        throw new Error(
+          payload.message ?? "Não foi possível consultar a fila.",
+        );
       }
       if (sessionResponse.ok) {
         const session = (await sessionResponse.json()) as {
@@ -92,7 +97,9 @@ export function QualityQueueClient() {
       setPriority(nextPriority);
     } catch (caught) {
       setItems([]);
-      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+      setError(
+        caught instanceof Error ? caught.message : "Falha desconhecida.",
+      );
     } finally {
       setLoading(false);
     }
@@ -114,14 +121,18 @@ export function QualityQueueClient() {
       };
 
       if (!response.ok || !payload.success || !payload.detail) {
-        throw new Error(payload.message ?? "Não foi possível abrir a conferência.");
+        throw new Error(
+          payload.message ?? "Não foi possível abrir a conferência.",
+        );
       }
 
       setDetail(payload.detail);
       setJustification("");
       setRequestResult("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+      setError(
+        caught instanceof Error ? caught.message : "Falha desconhecida.",
+      );
     } finally {
       setDetailLoading(false);
     }
@@ -156,7 +167,9 @@ export function QualityQueueClient() {
       };
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Não foi possível registrar a solicitação.");
+        throw new Error(
+          payload.message ?? "Não foi possível registrar a solicitação.",
+        );
       }
 
       setRequestResult(
@@ -166,7 +179,9 @@ export function QualityQueueClient() {
       );
       setJustification("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Falha desconhecida.");
+      setError(
+        caught instanceof Error ? caught.message : "Falha desconhecida.",
+      );
     } finally {
       setRequesting(false);
     }
@@ -185,14 +200,21 @@ export function QualityQueueClient() {
       <section className="rounded-3xl border border-cyan-400/15 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.13),transparent_32%),linear-gradient(135deg,#0b1326,#080d1b)] p-6 md:p-8">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-400">Conferência humana</p>
-            <h2 className="mt-3 text-3xl font-semibold text-white md:text-4xl">Pendências priorizadas sem exposição indevida</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-400">
+              Conferência humana
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold text-white md:text-4xl">
+              Pendências priorizadas sem exposição indevida
+            </h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-              Nomes reduzidos a iniciais; documentos e valores biográficos não são exibidos. Esta tela não altera registros.
+              Nomes reduzidos a iniciais; documentos e valores biográficos não
+              são exibidos. Esta tela não altera registros.
             </p>
           </div>
           <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/45 px-5 py-4">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Segurança</p>
+            <p className="text-xs uppercase tracking-wider text-slate-500">
+              Segurança
+            </p>
             <p className="mt-2 text-sm font-semibold text-emerald-300">
               {auditPersisted ? "Consulta auditada" : "Aguardando consulta"}
             </p>
@@ -203,15 +225,24 @@ export function QualityQueueClient() {
 
       {error && (
         <div className="mt-5 rounded-2xl border border-rose-400/25 bg-rose-400/10 p-4 text-sm text-rose-200">
-          {error} <Link href="/review-queue" className="underline">Autenticar</Link>
+          {error}{" "}
+          <Link href="/review-queue" className="underline">
+            Autenticar
+          </Link>
         </div>
       )}
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-[#0a1020]">
         <div className="flex flex-col gap-4 border-b border-slate-800 p-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="font-semibold text-white">Registros para conferência</h3>
-            <p className="mt-1 text-xs text-slate-600">{loading ? "Carregando..." : `${items.length} item(ns) nesta prioridade`}</p>
+            <h3 className="font-semibold text-white">
+              Registros para conferência
+            </h3>
+            <p className="mt-1 text-xs text-slate-600">
+              {loading
+                ? "Carregando..."
+                : `${items.length} item(ns) nesta prioridade`}
+            </p>
           </div>
           <div className="flex flex-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-1">
             {options.map((option) => (
@@ -239,15 +270,26 @@ export function QualityQueueClient() {
         ) : (
           <div className="grid gap-4 p-5 xl:grid-cols-2">
             {items.map((item) => {
-              const completeness = Math.round((item.fieldsPresent / item.fieldsExpected) * 100);
+              const completeness = Math.round(
+                (item.fieldsPresent / item.fieldsExpected) * 100,
+              );
               return (
-                <article key={item.queueId} className="rounded-2xl border border-slate-800 bg-slate-950/45 p-5">
+                <article
+                  key={item.queueId}
+                  className="rounded-2xl border border-slate-800 bg-slate-950/45 p-5"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-[11px] uppercase tracking-wider text-slate-600">Identidade protegida</p>
-                      <h4 className="mt-2 font-semibold text-white">{item.maskedName}</h4>
+                      <p className="text-[11px] uppercase tracking-wider text-slate-600">
+                        Identidade protegida
+                      </p>
+                      <h4 className="mt-2 font-semibold text-white">
+                        {item.maskedName}
+                      </h4>
                     </div>
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase ${priorityClasses(item.priority)}`}>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase ${priorityClasses(item.priority)}`}
+                    >
                       {priorityLabel(item.priority)}
                     </span>
                   </div>
@@ -258,15 +300,23 @@ export function QualityQueueClient() {
                       <span>{completeness}%</span>
                     </div>
                     <div className="mt-2 h-2 rounded-full bg-slate-800">
-                      <div className="h-full rounded-full bg-cyan-400" style={{ width: `${completeness}%` }} />
+                      <div
+                        className="h-full rounded-full bg-cyan-400"
+                        style={{ width: `${completeness}%` }}
+                      />
                     </div>
                   </div>
 
                   <div className="mt-5 border-t border-slate-800 pt-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Necessita conferência</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      Necessita conferência
+                    </p>
                     <ul className="mt-3 flex flex-wrap gap-2">
                       {item.issues.map((issue) => (
-                        <li key={issue} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+                        <li
+                          key={issue}
+                          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300"
+                        >
                           {issue}
                         </li>
                       ))}
@@ -321,9 +371,14 @@ export function QualityQueueClient() {
               ["CPF mascarado", detail.maskedCpf],
               ["RG mascarado", detail.maskedIdentityDocument],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-slate-800 bg-slate-950/45 p-4">
+              <div
+                key={label}
+                className="rounded-xl border border-slate-800 bg-slate-950/45 p-4"
+              >
                 <p className="text-xs text-slate-600">{label}</p>
-                <p className={`mt-2 text-sm ${value ? "text-white" : "text-amber-300"}`}>
+                <p
+                  className={`mt-2 text-sm ${value ? "text-white" : "text-amber-300"}`}
+                >
                   {value || "Não informado"}
                 </p>
               </div>
@@ -331,16 +386,21 @@ export function QualityQueueClient() {
           </div>
 
           <div className="mx-5 mb-5 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-xs leading-5 text-amber-100/75">
-            Esta visualização serve somente à conferência humana. Nenhum valor do cadastro pode ser alterado nesta tela.
+            Esta visualização serve somente à conferência humana. Nenhum valor
+            do cadastro pode ser alterado nesta tela.
           </div>
 
           {actorRole === "auditor" ? (
             <div className="mx-5 mb-5 rounded-xl border border-slate-700 bg-slate-950/45 p-4 text-sm text-slate-400">
-              Perfil Auditor: consulta permitida, abertura de solicitação bloqueada.
+              Perfil Auditor: consulta permitida, abertura de solicitação
+              bloqueada.
             </div>
           ) : (
             <div className="mx-5 mb-5 rounded-xl border border-cyan-400/20 bg-slate-950/45 p-5">
-              <label htmlFor="correction-justification" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <label
+                htmlFor="correction-justification"
+                className="text-xs font-semibold uppercase tracking-wider text-slate-500"
+              >
                 Justificativa da solicitação
               </label>
               <textarea

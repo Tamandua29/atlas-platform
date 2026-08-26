@@ -16,11 +16,7 @@ const REVIEW_TABLE_ID = "tblgtBw4wOvG4utaS";
 const CONFIRMATION_PHRASE = "REVERTER CORREÇÃO";
 
 type ProposalKey =
-  | "legalName"
-  | "birthDate"
-  | "motherName"
-  | "cpf"
-  | "identityDocument";
+  "legalName" | "birthDate" | "motherName" | "cpf" | "identityDocument";
 
 type StableValues = Record<ProposalKey, string | null>;
 
@@ -109,7 +105,9 @@ function parseProposalKeys(raw: string | undefined): ProposalKey[] {
     allowed.includes(key as ProposalKey),
   );
   if (keys.length === 0 || keys.length !== Object.keys(parsed).length) {
-    throw new Error("A proposta aplicada não possui campos reversíveis válidos.");
+    throw new Error(
+      "A proposta aplicada não possui campos reversíveis válidos.",
+    );
   }
   return keys;
 }
@@ -138,7 +136,8 @@ function snapshotPatch(
 ): Partial<IndividualFields> {
   const patch: Partial<IndividualFields> = {};
   if (keys.includes("legalName")) patch["Nome Completo"] = snapshot.legalName;
-  if (keys.includes("birthDate")) patch["Data de Nascimento"] = snapshot.birthDate;
+  if (keys.includes("birthDate"))
+    patch["Data de Nascimento"] = snapshot.birthDate;
   if (keys.includes("motherName")) patch.Mãe = snapshot.motherName;
   if (keys.includes("cpf")) patch.CPF = snapshot.cpf;
   if (keys.includes("identityDocument")) {
@@ -185,14 +184,22 @@ async function loadReversalContext(reviewId: string) {
   const review = reviews[0];
   const sourceRecordId = review?.fields.Indivíduo?.[0];
   if (!review || !sourceRecordId) {
-    throw new Error("A revisão aplicada ou o cadastro vinculado não foi encontrado.");
+    throw new Error(
+      "A revisão aplicada ou o cadastro vinculado não foi encontrado.",
+    );
   }
 
   const individuals = await listAllAirtableRecords<IndividualFields>(
     configuration.individualsTableId,
     {
       baseId: configuration.individualsPreviewBaseId,
-      fields: ["Nome Completo", "Data de Nascimento", "Mãe", "CPF", "Registro Geral"],
+      fields: [
+        "Nome Completo",
+        "Data de Nascimento",
+        "Mãe",
+        "CPF",
+        "Registro Geral",
+      ],
       filterByFormula: `RECORD_ID()='${sourceRecordId.replace(/'/g, "\\'")}'`,
       maxRecords: 1,
     },
@@ -235,19 +242,32 @@ export async function requestCorrectionReversal(input: {
 }): Promise<ReversalResult> {
   const context = await loadReversalContext(input.reviewId);
   const fields = context.review.fields;
-  if (fields["Situação da Execução"] !== "Aplicada" || fields["Situação da Proposta"] !== "Aplicada") {
-    throw new Error("Somente uma correção aplicada pode receber solicitação de reversão.");
+  if (
+    fields["Situação da Execução"] !== "Aplicada" ||
+    fields["Situação da Proposta"] !== "Aplicada"
+  ) {
+    throw new Error(
+      "Somente uma correção aplicada pode receber solicitação de reversão.",
+    );
   }
   if (fields["Situação da Reversão"]) {
-    if (fields["Solicitante da Reversão"] === input.requesterId) return result(fields);
+    if (fields["Solicitante da Reversão"] === input.requesterId)
+      return result(fields);
     throw new Error("Já existe um fluxo de reversão para esta correção.");
   }
   if (fields["Executor Técnico"] === input.requesterId) {
-    throw new Error("O executor original não pode solicitar a reversão da própria escrita.");
+    throw new Error(
+      "O executor original não pode solicitar a reversão da própria escrita.",
+    );
   }
   const currentHash = await hashFields(context.individual.fields);
-  if (!fields["Hash Após Aplicação"] || currentHash !== fields["Hash Após Aplicação"]) {
-    throw new Error("O cadastro mudou após a aplicação. A reversão foi bloqueada por conflito de versão.");
+  if (
+    !fields["Hash Após Aplicação"] ||
+    currentHash !== fields["Hash Após Aplicação"]
+  ) {
+    throw new Error(
+      "O cadastro mudou após a aplicação. A reversão foi bloqueada por conflito de versão.",
+    );
   }
   const reason = validateReason(input.reason, "O motivo da reversão");
   await updateAirtableRecord<ReversalReviewFields>(
@@ -284,7 +304,8 @@ export async function decideCorrectionReversal(input: {
     throw new Error("Somente reversões pendentes podem receber uma decisão.");
   }
   const requesterId = fields["Solicitante da Reversão"]?.trim();
-  if (!requesterId) throw new Error("A solicitação não possui identidade responsável.");
+  if (!requesterId)
+    throw new Error("A solicitação não possui identidade responsável.");
   assertDistinctActors([
     { id: requesterId, label: "solicitante da reversão" },
     { id: fields["Executor Técnico"], label: "executor original" },
@@ -348,7 +369,9 @@ export async function executeCorrectionReversal(input: {
   revertedAt: Date;
 }): Promise<ReversalResult> {
   if (input.confirmation.trim() !== CONFIRMATION_PHRASE) {
-    throw new Error(`Digite exatamente “${CONFIRMATION_PHRASE}” para confirmar a reversão.`);
+    throw new Error(
+      `Digite exatamente “${CONFIRMATION_PHRASE}” para confirmar a reversão.`,
+    );
   }
   validateReason(input.note, "A nota da reversão");
   const context = await loadReversalContext(input.reviewId);
@@ -358,14 +381,21 @@ export async function executeCorrectionReversal(input: {
     return result(fields, 0, true);
   }
   if (fields["Aprovador da Reversão"] !== input.executorId) {
-    throw new Error("A reversão deve ser executada pela identidade segregada que a aprovou.");
+    throw new Error(
+      "A reversão deve ser executada pela identidade segregada que a aprovou.",
+    );
   }
 
   const snapshot = parseSnapshot(fields["Snapshot Anterior à Aplicação"]);
   const proposalKeys = parseProposalKeys(fields["Proposta de Correção"]);
   const expectedRevertedHash = await hashValues(snapshot);
-  if (fields["Hash da Versão de Origem"] && expectedRevertedHash !== fields["Hash da Versão de Origem"]) {
-    throw new Error("O snapshot anterior não corresponde ao hash preservado na proposta.");
+  if (
+    fields["Hash da Versão de Origem"] &&
+    expectedRevertedHash !== fields["Hash da Versão de Origem"]
+  ) {
+    throw new Error(
+      "O snapshot anterior não corresponde ao hash preservado na proposta.",
+    );
   }
 
   const currentHash = await hashFields(context.individual.fields);
@@ -389,7 +419,9 @@ export async function executeCorrectionReversal(input: {
     throw new Error("Somente uma reversão aprovada pode ser executada.");
   }
   if (disposition === "blocked-version") {
-    throw new Error("O cadastro mudou após a correção. A reversão foi bloqueada por conflito de versão.");
+    throw new Error(
+      "O cadastro mudou após a correção. A reversão foi bloqueada por conflito de versão.",
+    );
   }
 
   await updateAirtableRecord<ReversalReviewFields>(
@@ -411,8 +443,10 @@ export async function executeCorrectionReversal(input: {
       snapshotPatch(snapshot, proposalKeys),
       { baseId: context.configuration.individualsPreviewBaseId },
     );
-    if (await hashFields(updated.fields) !== expectedRevertedHash) {
-      throw new Error("A verificação posterior não corresponde ao snapshot autorizado.");
+    if ((await hashFields(updated.fields)) !== expectedRevertedHash) {
+      throw new Error(
+        "A verificação posterior não corresponde ao snapshot autorizado.",
+      );
     }
     return finalizeReversal({
       context,
@@ -428,9 +462,10 @@ export async function executeCorrectionReversal(input: {
       context.review.id,
       {
         "Situação da Reversão": "Falhou",
-        "Erro da Reversão": error instanceof Error
-          ? error.message.slice(0, 1000)
-          : "Falha desconhecida.",
+        "Erro da Reversão":
+          error instanceof Error
+            ? error.message.slice(0, 1000)
+            : "Falha desconhecida.",
       },
       { baseId: context.configuration.individualsPreviewBaseId },
     );

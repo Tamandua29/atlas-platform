@@ -5,7 +5,10 @@ import { LoginAttemptGuard } from "@/features/auth/login-attempt-policy";
 const guard = new LoginAttemptGuard();
 
 export function loginAttemptKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")[0]
+    ?.trim();
   const realIp = request.headers.get("x-real-ip")?.trim();
   const address = forwarded || realIp || "local";
   const agent = request.headers.get("user-agent")?.slice(0, 160) || "unknown";

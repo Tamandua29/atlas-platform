@@ -30,8 +30,7 @@ export function useOperationalConnections({
     if (!map || !enabled || !map.isStyleLoaded()) return;
 
     const existingSource = map.getSource(SOURCE_ID) as
-      | import("maplibre-gl").GeoJSONSource
-      | undefined;
+      import("maplibre-gl").GeoJSONSource | undefined;
 
     if (existingSource) {
       existingSource.setData(data);
@@ -50,18 +49,8 @@ export function useOperationalConnections({
           "#f8fafc",
           "#22d3ee",
         ],
-        "line-width": [
-          "case",
-          ["==", ["get", "selected"], true],
-          4,
-          2,
-        ],
-        "line-opacity": [
-          "case",
-          ["==", ["get", "selected"], true],
-          0.95,
-          0.55,
-        ],
+        "line-width": ["case", ["==", ["get", "selected"], true], 4, 2],
+        "line-opacity": ["case", ["==", ["get", "selected"], true], 0.95, 0.55],
         "line-dasharray": [2, 2],
       },
     });

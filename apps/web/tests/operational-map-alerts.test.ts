@@ -74,13 +74,13 @@ describe("operational map alert repository", () => {
     expect(entities).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-        id: "alert:warrant-1:address-1",
-        type: "alert",
-        title: "Mandado de prisão",
-        coordinates: [-59.982, -3.101],
-        priority: "medium",
-        status: "Vigente",
-        reference: "warrant-1",
+          id: "alert:warrant-1:address-1",
+          type: "alert",
+          title: "Mandado de prisão",
+          coordinates: [-59.982, -3.101],
+          priority: "medium",
+          status: "Vigente",
+          reference: "warrant-1",
         }),
       ]),
     );

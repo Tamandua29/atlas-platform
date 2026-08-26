@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!await validBootstrapCredential(payload.credential)) {
+  if (!(await validBootstrapCredential(payload.credential))) {
     const failure = registerLoginFailure(attemptKey);
     return NextResponse.json(
       {
@@ -101,8 +101,5 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   await clearAtlasSession();
-  return NextResponse.json(
-    { authenticated: false },
-    { headers: NO_STORE },
-  );
+  return NextResponse.json({ authenticated: false }, { headers: NO_STORE });
 }

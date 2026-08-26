@@ -22,11 +22,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const payload = (await request.json()) as { justification?: unknown };
     if (
-      typeof payload.justification !== "string"
-      || payload.justification.trim().length < 10
-      || payload.justification.trim().length > 500
+      typeof payload.justification !== "string" ||
+      payload.justification.trim().length < 10 ||
+      payload.justification.trim().length > 500
     ) {
-      throw new ValidationError("A justificativa deve possuir entre 10 e 500 caracteres.");
+      throw new ValidationError(
+        "A justificativa deve possuir entre 10 e 500 caracteres.",
+      );
     }
 
     const result = await requestIndividualDataCorrection({

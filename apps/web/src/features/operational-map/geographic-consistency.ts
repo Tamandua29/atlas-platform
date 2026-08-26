@@ -10,9 +10,7 @@ type GeographicBounds = {
   maxLongitude: number;
 };
 
-const MANAUS_NEIGHBORHOOD_BOUNDS: Readonly<
-  Record<string, GeographicBounds>
-> = {
+const MANAUS_NEIGHBORHOOD_BOUNDS: Readonly<Record<string, GeographicBounds>> = {
   // Limite conservador. Substituir pelo polígono oficial quando
   // a camada geográfica institucional estiver disponível.
   japiim: {
@@ -23,9 +21,7 @@ const MANAUS_NEIGHBORHOOD_BOUNDS: Readonly<
   },
 };
 
-export function normalizeGeographicName(
-  value: unknown,
-): string {
+export function normalizeGeographicName(value: unknown): string {
   if (typeof value !== "string") {
     return "";
   }
@@ -44,11 +40,9 @@ export function isCoordinateConsistentWithNeighborhood({
 }: GeographicCoordinates & {
   neighborhood: unknown;
 }): boolean {
-  const normalizedNeighborhood =
-    normalizeGeographicName(neighborhood);
+  const normalizedNeighborhood = normalizeGeographicName(neighborhood);
 
-  const bounds =
-    MANAUS_NEIGHBORHOOD_BOUNDS[normalizedNeighborhood];
+  const bounds = MANAUS_NEIGHBORHOOD_BOUNDS[normalizedNeighborhood];
 
   // Não inferimos limites inexistentes. A ausência de uma regra
   // específica não é tratada como inconsistência geográfica.

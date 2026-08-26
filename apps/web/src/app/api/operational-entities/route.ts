@@ -6,8 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const entities =
-      await loadOperationalEntitiesFromAirtable();
+    const entities = await loadOperationalEntitiesFromAirtable();
 
     return NextResponse.json({
       success: true,
@@ -16,10 +15,7 @@ export async function GET() {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error(
-      "Falha ao carregar entidades operacionais:",
-      error,
-    );
+    console.error("Falha ao carregar entidades operacionais:", error);
 
     return NextResponse.json(
       {

@@ -17,22 +17,21 @@ export async function GET() {
   try {
     const configuration = getAirtableConfiguration();
 
-    const records =
-      await listAllAirtableRecords<AirtableOccurrenceFields>(
-        configuration.occurrencesTableId,
-        {
-          fields: [
-            "ID Ocorrência",
-            "Número da Ocorrência",
-            "Data e Hora",
-            "Natureza",
-            "Categoria",
-            "Situação",
-            "Descrição",
-          ],
-          maxRecords: 5,
-        },
-      );
+    const records = await listAllAirtableRecords<AirtableOccurrenceFields>(
+      configuration.occurrencesTableId,
+      {
+        fields: [
+          "ID Ocorrência",
+          "Número da Ocorrência",
+          "Data e Hora",
+          "Natureza",
+          "Categoria",
+          "Situação",
+          "Descrição",
+        ],
+        maxRecords: 5,
+      },
+    );
 
     return NextResponse.json({
       success: true,

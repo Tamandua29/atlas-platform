@@ -35,7 +35,9 @@ function text(fields: ZoneFields, ...names: string[]) {
   return null;
 }
 
-export async function loadOperationalZonesFromAirtable(): Promise<OperationalZone[]> {
+export async function loadOperationalZonesFromAirtable(): Promise<
+  OperationalZone[]
+> {
   const tableId = process.env.AIRTABLE_OPERATIONAL_ZONES_TABLE_ID?.trim();
   if (!tableId) return [];
 
@@ -63,17 +65,23 @@ export async function loadOperationalZonesFromAirtable(): Promise<OperationalZon
     zones.push({
       id: record.id,
       name,
-      description: text(record.fields, "Descrição", "Description") ?? "Área explicitamente cadastrada na fonte.",
+      description:
+        text(record.fields, "Descrição", "Description") ??
+        "Área explicitamente cadastrada na fonte.",
       type: rawType as OperationalZoneType,
       status: rawStatus as OperationalZoneStatus,
       priority: normalizeOperationalZonePriority(
         text(record.fields, "Prioridade", "Priority"),
       ),
       reference: text(record.fields, "Referência", "Reference") ?? record.id,
-      responsibleUnit: text(record.fields, "Unidade Responsável", "Responsible Unit") ?? "Não informada",
+      responsibleUnit:
+        text(record.fields, "Unidade Responsável", "Responsible Unit") ??
+        "Não informada",
       coordinates,
       createdAt: record.createdTime,
-      updatedAt: text(record.fields, "Atualizado em", "Updated At") ?? record.createdTime,
+      updatedAt:
+        text(record.fields, "Atualizado em", "Updated At") ??
+        record.createdTime,
     });
   }
 

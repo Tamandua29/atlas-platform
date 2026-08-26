@@ -12,7 +12,11 @@ export type IntelligenceOverview = {
     warrants: number;
     all: number;
   };
-  identityCoverage: { complete: number; incomplete: number; percentage: number };
+  identityCoverage: {
+    complete: number;
+    incomplete: number;
+    percentage: number;
+  };
   organizationLinks: {
     organizationsWithLinks: number;
     explicitLinks: number;
@@ -53,7 +57,9 @@ export function buildIntelligenceOverview(
   };
 
   for (const warrant of input.warrants) {
-    warrantAttention[classifyWarrantAttention(warrant.status, warrant.expiresAt, now)] += 1;
+    warrantAttention[
+      classifyWarrantAttention(warrant.status, warrant.expiresAt, now)
+    ] += 1;
   }
 
   const totals = {
@@ -61,7 +67,11 @@ export function buildIntelligenceOverview(
     organizations: input.organizations.length,
     vehicles: input.vehicles.length,
     warrants: input.warrants.length,
-    all: input.individuals.length + input.organizations.length + input.vehicles.length + input.warrants.length,
+    all:
+      input.individuals.length +
+      input.organizations.length +
+      input.vehicles.length +
+      input.warrants.length,
   };
 
   return {
@@ -69,13 +79,16 @@ export function buildIntelligenceOverview(
     identityCoverage: {
       complete: completeIdentities,
       incomplete: totals.individuals - completeIdentities,
-      percentage: totals.individuals === 0
-        ? 0
-        : Math.round((completeIdentities / totals.individuals) * 1000) / 10,
+      percentage:
+        totals.individuals === 0
+          ? 0
+          : Math.round((completeIdentities / totals.individuals) * 1000) / 10,
     },
     organizationLinks: {
       organizationsWithLinks: input.organizations.filter(
-        (organization) => organization.explicitLinkCount > 0 || organization.linkedIndividualCount > 0,
+        (organization) =>
+          organization.explicitLinkCount > 0 ||
+          organization.linkedIndividualCount > 0,
       ).length,
       explicitLinks: input.organizations.reduce(
         (total, organization) => total + organization.explicitLinkCount,
@@ -88,11 +101,17 @@ export function buildIntelligenceOverview(
     },
     warrantAttention: {
       ...warrantAttention,
-      requiringAttention: warrantAttention.active + warrantAttention.expiring + warrantAttention.expired,
+      requiringAttention:
+        warrantAttention.active +
+        warrantAttention.expiring +
+        warrantAttention.expired,
     },
     vehicleStatus: {
-      informed: input.vehicles.filter((vehicle) => Boolean(vehicle.status?.trim())).length,
-      notInformed: input.vehicles.filter((vehicle) => !vehicle.status?.trim()).length,
+      informed: input.vehicles.filter((vehicle) =>
+        Boolean(vehicle.status?.trim()),
+      ).length,
+      notInformed: input.vehicles.filter((vehicle) => !vehicle.status?.trim())
+        .length,
     },
     generatedAt: now.toISOString(),
   };

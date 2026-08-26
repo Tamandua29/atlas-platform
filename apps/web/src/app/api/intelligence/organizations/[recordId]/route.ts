@@ -19,7 +19,11 @@ export async function GET(
 
   if (!/^rec[a-zA-Z0-9]+$/.test(recordId)) {
     return NextResponse.json(
-      { success: false, correlationId, message: "Identificador de organização inválido." },
+      {
+        success: false,
+        correlationId,
+        message: "Identificador de organização inválido.",
+      },
       { status: 400 },
     );
   }
@@ -28,26 +32,32 @@ export async function GET(
     const organization = await getOrganizationProfile(recordId);
     if (!organization) {
       return NextResponse.json(
-        { success: false, correlationId, message: "Organização não localizada." },
+        {
+          success: false,
+          correlationId,
+          message: "Organização não localizada.",
+        },
         { status: 404 },
       );
     }
 
-    const auditPersisted = await persistAuditSafely(AuditEntry.create({
-      action: "intelligence.organizations.profile",
-      outcome: "success",
-      occurredAt: new Date(),
-      correlationId,
-      processedCount: 1,
-      successCount: 1,
-      metadata: {
-        actorId: authorization.session.actorId,
-        actorRole: authorization.session.role,
-        organizationRecordId: recordId,
-        explicitLinkCount: organization.links.length,
-        mode: "protected-organization-profile",
-      },
-    }));
+    const auditPersisted = await persistAuditSafely(
+      AuditEntry.create({
+        action: "intelligence.organizations.profile",
+        outcome: "success",
+        occurredAt: new Date(),
+        correlationId,
+        processedCount: 1,
+        successCount: 1,
+        metadata: {
+          actorId: authorization.session.actorId,
+          actorRole: authorization.session.role,
+          organizationRecordId: recordId,
+          explicitLinkCount: organization.links.length,
+          mode: "protected-organization-profile",
+        },
+      }),
+    );
 
     return NextResponse.json(
       { success: true, auditPersisted, correlationId, organization },

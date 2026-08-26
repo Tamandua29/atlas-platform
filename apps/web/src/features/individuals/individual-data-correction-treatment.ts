@@ -29,10 +29,7 @@ type CorrectionTreatmentFields = {
 };
 
 export type CorrectionTreatmentStatus =
-  | "open"
-  | "in_progress"
-  | "completed"
-  | "cancelled";
+  "open" | "in_progress" | "completed" | "cancelled";
 
 export type SafeCorrectionTreatmentItem = {
   reviewId: string;
@@ -48,7 +45,9 @@ export type SafeCorrectionTreatmentItem = {
   proposedAt: string | null;
 };
 
-function statusFromAirtable(value: string | undefined): CorrectionTreatmentStatus {
+function statusFromAirtable(
+  value: string | undefined,
+): CorrectionTreatmentStatus {
   if (value === "Em andamento") return "in_progress";
   if (value === "Concluída") return "completed";
   if (value === "Cancelada" || value === "Suspensa") return "cancelled";
@@ -60,7 +59,9 @@ function safeJustification(value: string | undefined): string | null {
   return normalized || null;
 }
 
-function toSafeItem(fields: CorrectionTreatmentFields): SafeCorrectionTreatmentItem | null {
+function toSafeItem(
+  fields: CorrectionTreatmentFields,
+): SafeCorrectionTreatmentItem | null {
   const reviewId = fields["ID Revisão"]?.trim();
   if (!reviewId) return null;
 
@@ -68,10 +69,11 @@ function toSafeItem(fields: CorrectionTreatmentFields): SafeCorrectionTreatmentI
     reviewId,
     status: statusFromAirtable(fields.Situação),
     openedOn: fields["Data de Abertura"] ?? null,
-    issues: fields["Campos para Saneamento"]
-      ?.split(/\r?\n/)
-      .map((value) => value.trim())
-      .filter(Boolean) ?? [],
+    issues:
+      fields["Campos para Saneamento"]
+        ?.split(/\r?\n/)
+        .map((value) => value.trim())
+        .filter(Boolean) ?? [],
     justification: safeJustification(fields.Motivo),
     requesterId: fields["Solicitante Técnico"]?.trim() || null,
     assigneeId: fields["Responsável Técnico do Saneamento"]?.trim() || null,
@@ -84,31 +86,28 @@ function toSafeItem(fields: CorrectionTreatmentFields): SafeCorrectionTreatmentI
 
 async function loadCorrectionRequests() {
   const configuration = getAirtableConfiguration();
-  return listAllAirtableRecords<CorrectionTreatmentFields>(
-    REVIEW_TABLE_ID,
-    {
-      baseId: configuration.individualsPreviewBaseId,
-      fields: [
-        "ID Revisão",
-        "Motivo",
-        "Situação",
-        "Data de Abertura",
-        "Data de Conclusão",
-        "Resultado",
-        "Referência Opaca da Qualidade",
-        "Campos para Saneamento",
-        "Solicitante Técnico",
-        "Chave Idempotente do Saneamento",
-        "Responsável Técnico do Saneamento",
-        "Nota de Tratamento",
-        "Atualizado em",
-        "Situação da Proposta",
-        "Proposta em",
-      ],
-      filterByFormula: "NOT({Chave Idempotente do Saneamento}='')",
-      sort: [{ field: "Data de Abertura", direction: "desc" }],
-    },
-  );
+  return listAllAirtableRecords<CorrectionTreatmentFields>(REVIEW_TABLE_ID, {
+    baseId: configuration.individualsPreviewBaseId,
+    fields: [
+      "ID Revisão",
+      "Motivo",
+      "Situação",
+      "Data de Abertura",
+      "Data de Conclusão",
+      "Resultado",
+      "Referência Opaca da Qualidade",
+      "Campos para Saneamento",
+      "Solicitante Técnico",
+      "Chave Idempotente do Saneamento",
+      "Responsável Técnico do Saneamento",
+      "Nota de Tratamento",
+      "Atualizado em",
+      "Situação da Proposta",
+      "Proposta em",
+    ],
+    filterByFormula: "NOT({Chave Idempotente do Saneamento}='')",
+    sort: [{ field: "Data de Abertura", direction: "desc" }],
+  });
 }
 
 export async function listSafeCorrectionTreatmentQueue(
@@ -161,14 +160,15 @@ export async function transitionCorrectionTreatment(input: {
 
   const note = input.note?.trim() ?? "";
   if (note.length < 10 || note.length > 1000) {
-    throw new Error("A nota de conclusão deve possuir entre 10 e 1000 caracteres.");
+    throw new Error(
+      "A nota de conclusão deve possuir entre 10 e 1000 caracteres.",
+    );
   }
   assertTreatmentTransition(current.status, "complete");
-  if (
-    !input.actorIsAdministrator
-    && current.assigneeId !== input.actorId
-  ) {
-    throw new Error("A solicitação deve ser concluída pelo revisor que assumiu o atendimento.");
+  if (!input.actorIsAdministrator && current.assigneeId !== input.actorId) {
+    throw new Error(
+      "A solicitação deve ser concluída pelo revisor que assumiu o atendimento.",
+    );
   }
 
   const updated = await updateAirtableRecord<CorrectionTreatmentFields>(
@@ -177,7 +177,8 @@ export async function transitionCorrectionTreatment(input: {
     {
       Situação: "Concluída",
       "Data de Conclusão": input.occurredAt.toISOString().slice(0, 10),
-      Resultado: "Solicitação de saneamento analisada e concluída por decisão humana.",
+      Resultado:
+        "Solicitação de saneamento analisada e concluída por decisão humana.",
       "Nota de Tratamento": note,
       "Atualizado em": input.occurredAt.toISOString(),
     },

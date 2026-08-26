@@ -17,15 +17,11 @@ type AirtableConfiguration = {
   individualsPreviewBaseId: string;
 };
 
-function getRequiredEnvironmentVariable(
-  variableName: string,
-): string {
+function getRequiredEnvironmentVariable(variableName: string): string {
   const value = process.env[variableName]?.trim();
 
   if (!value) {
-    throw new Error(
-      `A variável ${variableName} não foi configurada.`,
-    );
+    throw new Error(`A variável ${variableName} não foi configurada.`);
   }
 
   return value;
@@ -33,13 +29,9 @@ function getRequiredEnvironmentVariable(
 
 export function getAirtableConfiguration(): AirtableConfiguration {
   return {
-    accessToken: getRequiredEnvironmentVariable(
-      "AIRTABLE_ACCESS_TOKEN",
-    ),
+    accessToken: getRequiredEnvironmentVariable("AIRTABLE_ACCESS_TOKEN"),
 
-    baseId: getRequiredEnvironmentVariable(
-      "AIRTABLE_BASE_ID",
-    ),
+    baseId: getRequiredEnvironmentVariable("AIRTABLE_BASE_ID"),
 
     occurrencesTableId: getRequiredEnvironmentVariable(
       "AIRTABLE_OCCURRENCES_TABLE_ID",
@@ -65,9 +57,7 @@ export function getAirtableConfiguration(): AirtableConfiguration {
       "AIRTABLE_ADDRESSES_TABLE_ID",
     ),
 
-    phonesTableId: getRequiredEnvironmentVariable(
-      "AIRTABLE_PHONES_TABLE_ID",
-    ),
+    phonesTableId: getRequiredEnvironmentVariable("AIRTABLE_PHONES_TABLE_ID"),
 
     vehiclesTableId: getRequiredEnvironmentVariable(
       "AIRTABLE_VEHICLES_TABLE_ID",
@@ -87,8 +77,6 @@ export function getAirtableConfiguration(): AirtableConfiguration {
 
     individualsPreviewBaseId:
       process.env.AIRTABLE_INDIVIDUALS_PREVIEW_BASE_ID?.trim() ||
-      getRequiredEnvironmentVariable(
-        "AIRTABLE_BASE_ID",
-      ),
+      getRequiredEnvironmentVariable("AIRTABLE_BASE_ID"),
   };
 }

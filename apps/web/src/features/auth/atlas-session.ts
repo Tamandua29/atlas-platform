@@ -15,11 +15,17 @@ const SESSION_DURATION_SECONDS = 60 * 60 * 8;
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
 }
 
 function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
-  const padded = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const padded = value
+    .replaceAll("-", "+")
+    .replaceAll("_", "/")
+    .padEnd(Math.ceil(value.length / 4) * 4, "=");
   const binary = atob(padded);
   const bytes = new Uint8Array(new ArrayBuffer(binary.length));
 
@@ -31,9 +37,11 @@ function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
 }
 
 function sessionSecret(): string | null {
-  return process.env.ATLAS_SESSION_SECRET?.trim()
-    || process.env.ATLAS_INTERNAL_API_KEY?.trim()
-    || null;
+  return (
+    process.env.ATLAS_SESSION_SECRET?.trim() ||
+    process.env.ATLAS_INTERNAL_API_KEY?.trim() ||
+    null
+  );
 }
 
 async function signingKey(secret: string): Promise<CryptoKey> {
@@ -77,9 +85,12 @@ export async function createAtlasSession(): Promise<AtlasSession> {
     issuedAt: now,
     expiresAt: now + SESSION_DURATION_SECONDS,
   };
-  const payload = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(session)));
+  const payload = bytesToBase64Url(
+    new TextEncoder().encode(JSON.stringify(session)),
+  );
   const secret = sessionSecret();
-  if (!secret) throw new Error("O segredo de sessão do Atlas não foi configurado.");
+  if (!secret)
+    throw new Error("O segredo de sessão do Atlas não foi configurado.");
   const token = `${payload}.${await sign(payload, secret)}`;
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
@@ -126,19 +137,18 @@ export async function readAtlasSession(): Promise<AtlasSession | null> {
     ) as AtlasSession;
     const now = Math.floor(Date.now() / 1000);
     if (
-      typeof session.actorId !== "string"
-      || session.actorId.length < 3
-      || (
-        session.role !== "reviewer"
-        && session.role !== "auditor"
-        && session.role !== "administrator"
-      )
-      || typeof session.issuedAt !== "number"
-      || session.issuedAt > now + 60
-      || typeof session.expiresAt !== "number"
-      || session.expiresAt <= now
-      || session.expiresAt - session.issuedAt > SESSION_DURATION_SECONDS
-    ) return null;
+      typeof session.actorId !== "string" ||
+      session.actorId.length < 3 ||
+      (session.role !== "reviewer" &&
+        session.role !== "auditor" &&
+        session.role !== "administrator") ||
+      typeof session.issuedAt !== "number" ||
+      session.issuedAt > now + 60 ||
+      typeof session.expiresAt !== "number" ||
+      session.expiresAt <= now ||
+      session.expiresAt - session.issuedAt > SESSION_DURATION_SECONDS
+    )
+      return null;
     return session;
   } catch {
     return null;
@@ -153,7 +163,9 @@ async function credentialDigest(value: string): Promise<Uint8Array> {
   return new Uint8Array(digest);
 }
 
-export async function validBootstrapCredential(value: unknown): Promise<boolean> {
+export async function validBootstrapCredential(
+  value: unknown,
+): Promise<boolean> {
   const expected = process.env.ATLAS_INTERNAL_API_KEY?.trim();
   if (!expected || typeof value !== "string") return false;
 

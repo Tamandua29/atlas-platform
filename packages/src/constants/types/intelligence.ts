@@ -1,9 +1,9 @@
-import { ManausZone } from '../constants/territories';
+import { ManausZone } from "../constants/territories";
 
 export interface LinkNode {
   id: string;
   label: string;
-  type: 'PERSON' | 'ORGANIZATION' | 'LOCATION' | 'ASSET';
+  type: "PERSON" | "ORGANIZATION" | "LOCATION" | "ASSET";
   zone?: ManausZone;
   verified: boolean;
 }

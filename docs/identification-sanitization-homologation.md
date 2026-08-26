@@ -4,11 +4,12 @@ Este documento define o encerramento do escopo do módulo. “100%” significa 
 
 ## Critérios automatizados
 
-- [ ] `pnpm --filter web test`
-- [ ] `pnpm --filter @atlas/kernel test`
-- [ ] `pnpm -r typecheck`
-- [ ] `pnpm -r lint`
-- [ ] `pnpm -r build`
+- [x] `pnpm --filter web test`
+- [x] `pnpm --filter @atlas/kernel test`
+- [x] `pnpm -r typecheck`
+- [x] `pnpm -r lint`
+- [x] `pnpm format:check`
+- [x] `pnpm -r build`
 
 ## Segurança e autorização
 
@@ -46,3 +47,16 @@ Este documento define o encerramento do escopo do módulo. “100%” significa 
 ## Evidência de homologação
 
 Registrar data, branch, commit, executor dos testes e resultado de cada cenário manual. O módulo só recebe o marco de 100% após todos os itens estarem marcados.
+
+### Validação automatizada — 26/08/2026
+
+- Branch: `main`.
+- Commit-base validado: `394f7dcf690f338434e2d6af3ad040ff036be6c4`.
+- Executor: Codex, em ambiente isolado de homologação.
+- Aplicação web: 24 arquivos de teste e 98 testes aprovados.
+- Núcleo `@atlas/kernel`: 9 arquivos de teste e 59 testes aprovados.
+- Verificação de tipos: aprovada nos dois projetos do workspace.
+- ESLint: aprovado nos dois projetos do workspace.
+- Prettier: 170 arquivos normalizados; verificação final aprovada.
+- Build de produção: aprovado; 18 páginas geradas e todas as rotas compiladas.
+- Resultado: critérios automatizados aprovados. Os cenários manuais permanecem pendentes até execução com credenciais e integrações reais no ambiente de homologação.

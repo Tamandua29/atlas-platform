@@ -21,33 +21,21 @@ type AirtableIndividualFields = {
   "ID na Base de Origem"?: string;
 };
 
-class PreviewIndividualRepository
-  implements CanonicalIndividualRepository
-{
-  private readonly individuals:
-    CanonicalIndividual[] = [];
+class PreviewIndividualRepository implements CanonicalIndividualRepository {
+  private readonly individuals: CanonicalIndividual[] = [];
 
   async findBySourceKey(
     sourceKey: string,
   ): Promise<CanonicalIndividual | null> {
     return (
-      this.individuals.find(
-        (individual) =>
-          individual.sources.some(
-            (source) =>
-              source.key ===
-              sourceKey,
-          ),
+      this.individuals.find((individual) =>
+        individual.sources.some((source) => source.key === sourceKey),
       ) ?? null
     );
   }
 
-  async save(
-    individual: CanonicalIndividual,
-  ): Promise<void> {
-    this.individuals.push(
-      individual,
-    );
+  async save(individual: CanonicalIndividual): Promise<void> {
+    this.individuals.push(individual);
   }
 }
 
@@ -65,146 +53,82 @@ export type CanonicalIndividualPreview = {
   readonly identityDocumentPresent: boolean;
   readonly motherName: string | null;
   readonly normalizedMotherName: string | null;
-  readonly matchKeyStrategy:
-    | "cpf"
-    | "biographic"
-    | null;
+  readonly matchKeyStrategy: "cpf" | "biographic" | null;
   readonly created: boolean;
 };
 
 export async function previewCanonicalIndividualsFromAirtable(
   limit = 5,
 ): Promise<CanonicalIndividualPreview[]> {
-  const configuration =
-    getAirtableConfiguration();
+  const configuration = getAirtableConfiguration();
 
-  const records =
-    await listAllAirtableRecords<AirtableIndividualFields>(
-      configuration.individualsTableId,
-      {
-        baseId:
-          configuration
-            .individualsPreviewBaseId,
-        fields: [
-          "Nome Completo",
-          "Vulgo Principal",
-          "Data de Nascimento",
-          "CPF",
-          "Registro Geral",
-          "Mãe",
-        ],
-        maxRecords: Math.min(
-          Math.max(limit, 1),
-          5,
-        ),
-      },
-    );
+  const records = await listAllAirtableRecords<AirtableIndividualFields>(
+    configuration.individualsTableId,
+    {
+      baseId: configuration.individualsPreviewBaseId,
+      fields: [
+        "Nome Completo",
+        "Vulgo Principal",
+        "Data de Nascimento",
+        "CPF",
+        "Registro Geral",
+        "Mãe",
+      ],
+      maxRecords: Math.min(Math.max(limit, 1), 5),
+    },
+  );
 
-  const repository =
-    new PreviewIndividualRepository();
+  const repository = new PreviewIndividualRepository();
 
-  const previews:
-    CanonicalIndividualPreview[] = [];
+  const previews: CanonicalIndividualPreview[] = [];
 
   for (const record of records) {
-    const legalName =
-      record.fields[
-        "Nome Completo"
-      ]?.trim();
+    const legalName = record.fields["Nome Completo"]?.trim();
 
     if (!legalName) {
       continue;
     }
 
-    const timestamp = new Date(
-      record.createdTime,
+    const timestamp = new Date(record.createdTime);
+
+    const service = new RegisterCanonicalIndividual(
+      repository,
+      new FixedClock(timestamp),
     );
 
-    const service =
-      new RegisterCanonicalIndividual(
-        repository,
-        new FixedClock(timestamp),
-      );
+    const alias = record.fields["Vulgo Principal"]?.trim();
 
-    const alias =
-      record.fields[
-        "Vulgo Principal"
-      ]?.trim();
-
-    const result =
-      await service.execute({
-        legalName,
-        aliases: alias
-          ? [alias]
-          : [],
-        birthDate:
-          record.fields[
-            "Data de Nascimento"
-          ],
-        cpf: record.fields.CPF,
-        identityDocument:
-          record.fields[
-            "Registro Geral"
-          ],
-        motherName:
-          record.fields.Mãe,
-        source: {
-          system: "airtable",
-          baseId:
-            configuration
-              .individualsPreviewBaseId,
-          tableId:
-            configuration
-              .individualsTableId,
-          recordId: record.id,
-        },
-      });
+    const result = await service.execute({
+      legalName,
+      aliases: alias ? [alias] : [],
+      birthDate: record.fields["Data de Nascimento"],
+      cpf: record.fields.CPF,
+      identityDocument: record.fields["Registro Geral"],
+      motherName: record.fields.Mãe,
+      source: {
+        system: "airtable",
+        baseId: configuration.individualsPreviewBaseId,
+        tableId: configuration.individualsTableId,
+        recordId: record.id,
+      },
+    });
 
     previews.push({
-      id:
-        result.individual.id.value,
-      sourceRecordId:
-        record.id,
-      sourceKey:
-        result.individual
-          .sources[0]?.key ?? "",
-      legalName:
-        result.individual
-          .legalName,
-      normalizedName:
-        result.individual
-          .normalizedName,
-      aliases:
-        result.individual.aliases,
-      normalizedAliases:
-        result.individual
-          .normalizedAliases,
+      id: result.individual.id.value,
+      sourceRecordId: record.id,
+      sourceKey: result.individual.sources[0]?.key ?? "",
+      legalName: result.individual.legalName,
+      normalizedName: result.individual.normalizedName,
+      aliases: result.individual.aliases,
+      normalizedAliases: result.individual.normalizedAliases,
       birthDate:
-        result.individual
-          .birthDate
-          ?.toISOString()
-          .slice(0, 10) ?? null,
-      cpfPresent:
-        Boolean(
-          result.individual.cpf,
-        ),
-      cpfStructurallyValid:
-        result.individual
-          .cpfStructurallyValid,
-      identityDocumentPresent:
-        Boolean(
-          result.individual
-            .identityDocument,
-        ),
-      motherName:
-        result.individual
-          .motherName ?? null,
-      normalizedMotherName:
-        result.individual
-          .normalizedMotherName ?? null,
-      matchKeyStrategy:
-        result.individual
-          .matchKey?.strategy ?? null,
+        result.individual.birthDate?.toISOString().slice(0, 10) ?? null,
+      cpfPresent: Boolean(result.individual.cpf),
+      cpfStructurallyValid: result.individual.cpfStructurallyValid,
+      identityDocumentPresent: Boolean(result.individual.identityDocument),
+      motherName: result.individual.motherName ?? null,
+      normalizedMotherName: result.individual.normalizedMotherName ?? null,
+      matchKeyStrategy: result.individual.matchKey?.strategy ?? null,
       created: result.created,
     });
   }

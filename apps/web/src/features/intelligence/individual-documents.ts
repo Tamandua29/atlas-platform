@@ -9,17 +9,17 @@ type Attachment = {
 
 type DocumentFields = {
   "ID Documento"?: string;
-  "Indivíduo"?: string[];
-  "Título"?: string;
+  Indivíduo?: string[];
+  Título?: string;
   "Tipo de Documento"?: string;
-  "Arquivo"?: Attachment[];
+  Arquivo?: Attachment[];
   "Data do Documento"?: string;
   "Órgão de Origem"?: string;
   "Classificação da Informação"?: string;
-  "Ocorrências"?: string[];
+  Ocorrências?: string[];
   "Situação da Verificação"?: string;
   "Registro Ativo"?: boolean;
-  "Evidências"?: string[];
+  Evidências?: string[];
 };
 
 export type IndividualDocument = {
@@ -76,7 +76,9 @@ export async function listDocumentsForIndividual(
 
   return records
     .filter((record) => record.fields["Registro Ativo"] !== false)
-    .filter((record) => (record.fields["Indivíduo"] || []).includes(individualRecordId))
+    .filter((record) =>
+      (record.fields["Indivíduo"] || []).includes(individualRecordId),
+    )
     .map((record) => ({
       recordId: record.id,
       documentReference: text(record.fields["ID Documento"]) || record.id,
@@ -84,14 +86,18 @@ export async function listDocumentsForIndividual(
       documentType: text(record.fields["Tipo de Documento"]) || null,
       documentDate: text(record.fields["Data do Documento"]) || null,
       originAgency: text(record.fields["Órgão de Origem"]) || null,
-      informationClassification: text(record.fields["Classificação da Informação"]) || null,
-      verificationStatus: text(record.fields["Situação da Verificação"]) || null,
+      informationClassification:
+        text(record.fields["Classificação da Informação"]) || null,
+      verificationStatus:
+        text(record.fields["Situação da Verificação"]) || null,
       protectedAttachmentCount: count(record.fields.Arquivo),
       occurrenceReferenceCount: count(record.fields.Ocorrências),
       evidenceReferenceCount: count(record.fields.Evidências),
     }))
     .sort((left, right) => {
-      const byDate = (right.documentDate || "").localeCompare(left.documentDate || "");
+      const byDate = (right.documentDate || "").localeCompare(
+        left.documentDate || "",
+      );
       return byDate || left.title.localeCompare(right.title, "pt-BR");
     });
 }

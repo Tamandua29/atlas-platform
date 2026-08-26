@@ -10,8 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const audit = AuditEntry.create({
-    action:
-      "individuals.audit.dry-run",
+    action: "individuals.audit.dry-run",
     outcome: "success",
     occurredAt: new Date(),
     processedCount: 5,
@@ -26,11 +25,7 @@ export async function GET() {
     mode: "dry-run",
     writesPerformed: 0,
     tableId: AUDIT_TABLE_ID,
-    correlationId:
-      audit.correlationId,
-    payload:
-      mapAuditEntryToAirtable(
-        audit,
-      ),
+    correlationId: audit.correlationId,
+    payload: mapAuditEntryToAirtable(audit),
   });
 }

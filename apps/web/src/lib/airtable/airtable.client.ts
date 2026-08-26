@@ -31,32 +31,20 @@ function appendListOptions(
   searchParams: URLSearchParams,
   options: AirtableListOptions,
 ) {
-  searchParams.set(
-    "pageSize",
-    String(AIRTABLE_PAGE_SIZE),
-  );
+  searchParams.set("pageSize", String(AIRTABLE_PAGE_SIZE));
 
   options.fields?.forEach((field) => {
     searchParams.append("fields[]", field);
   });
 
   if (options.filterByFormula) {
-    searchParams.set(
-      "filterByFormula",
-      options.filterByFormula,
-    );
+    searchParams.set("filterByFormula", options.filterByFormula);
   }
 
   options.sort?.forEach((sort, index) => {
-    searchParams.set(
-      `sort[${index}][field]`,
-      sort.field,
-    );
+    searchParams.set(`sort[${index}][field]`, sort.field);
 
-    searchParams.set(
-      `sort[${index}][direction]`,
-      sort.direction,
-    );
+    searchParams.set(`sort[${index}][direction]`, sort.direction);
   });
 }
 
@@ -106,20 +94,13 @@ export async function listAllAirtableRecords<RecordFields>(
       );
     }
 
-    const page =
-      (await response.json()) as AirtableListResponse<RecordFields>;
+    const page = (await response.json()) as AirtableListResponse<RecordFields>;
 
     records.push(...page.records);
     offset = page.offset;
 
-    if (
-      options.maxRecords &&
-      records.length >= options.maxRecords
-    ) {
-      return records.slice(
-        0,
-        options.maxRecords,
-      );
+    if (options.maxRecords && records.length >= options.maxRecords) {
+      return records.slice(0, options.maxRecords);
     }
   } while (offset);
 
@@ -131,8 +112,7 @@ export async function createAirtableRecord<RecordFields>(
   fields: RecordFields,
   options: { baseId?: string } = {},
 ): Promise<AirtableRecord<RecordFields>> {
-  const configuration =
-    getAirtableConfiguration();
+  const configuration = getAirtableConfiguration();
 
   const endpoint =
     `${AIRTABLE_API_URL}/` +
@@ -142,11 +122,9 @@ export async function createAirtableRecord<RecordFields>(
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
-      Authorization:
-        `Bearer ${configuration.accessToken}`,
+      Authorization: `Bearer ${configuration.accessToken}`,
       Accept: "application/json",
-      "Content-Type":
-        "application/json",
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       records: [{ fields }],
@@ -161,16 +139,14 @@ export async function createAirtableRecord<RecordFields>(
     );
   }
 
-  const payload = await response.json() as {
+  const payload = (await response.json()) as {
     records: AirtableRecord<RecordFields>[];
   };
 
   const record = payload.records[0];
 
   if (!record) {
-    throw new Error(
-      "O Airtable não retornou o registro criado.",
-    );
+    throw new Error("O Airtable não retornou o registro criado.");
   }
 
   return record;
@@ -182,8 +158,7 @@ export async function updateAirtableRecord<RecordFields>(
   fields: Partial<RecordFields>,
   options: { baseId?: string } = {},
 ): Promise<AirtableRecord<RecordFields>> {
-  const configuration =
-    getAirtableConfiguration();
+  const configuration = getAirtableConfiguration();
 
   const endpoint =
     `${AIRTABLE_API_URL}/` +
@@ -193,11 +168,9 @@ export async function updateAirtableRecord<RecordFields>(
   const response = await fetch(endpoint, {
     method: "PATCH",
     headers: {
-      Authorization:
-        `Bearer ${configuration.accessToken}`,
+      Authorization: `Bearer ${configuration.accessToken}`,
       Accept: "application/json",
-      "Content-Type":
-        "application/json",
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       records: [
@@ -217,16 +190,14 @@ export async function updateAirtableRecord<RecordFields>(
     );
   }
 
-  const payload = await response.json() as {
+  const payload = (await response.json()) as {
     records: AirtableRecord<RecordFields>[];
   };
 
   const record = payload.records[0];
 
   if (!record) {
-    throw new Error(
-      "O Airtable não retornou o registro atualizado.",
-    );
+    throw new Error("O Airtable não retornou o registro atualizado.");
   }
 
   return record;

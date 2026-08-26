@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
-import type {
-  Map,
-  MapLayerMouseEvent,
-} from "maplibre-gl";
+import type { Map, MapLayerMouseEvent } from "maplibre-gl";
 
 import {
   calculateOperationalZoneBounds,
@@ -22,9 +19,7 @@ import {
   type OperationalZoneLayerHandlers,
 } from "./operational-map.zone-layers";
 
-import type {
-  OperationalZone,
-} from "./operational-map.types";
+import type { OperationalZone } from "./operational-map.types";
 
 export type UseOperationalZonesOptions = {
   map: Map | null;
@@ -57,9 +52,7 @@ export function useOperationalZones({
   );
 
   const selectedZone = useMemo(
-    () =>
-      zones.find((zone) => zone.id === selectedZoneId) ??
-      null,
+    () => zones.find((zone) => zone.id === selectedZoneId) ?? null,
     [selectedZoneId, zones],
   );
 
@@ -68,14 +61,9 @@ export function useOperationalZones({
       const clickedFeature = event.features?.[0];
 
       const featureIdentifier =
-        clickedFeature?.properties?.id ??
-        clickedFeature?.id ??
-        EMPTY_ZONE_ID;
+        clickedFeature?.properties?.id ?? clickedFeature?.id ?? EMPTY_ZONE_ID;
 
-      const zone = findOperationalZoneByFeatureId(
-        zones,
-        featureIdentifier,
-      );
+      const zone = findOperationalZoneByFeatureId(zones, featureIdentifier);
 
       onSelectZone(zone);
     },
@@ -104,11 +92,7 @@ export function useOperationalZones({
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
     }),
-    [
-      handleMouseEnter,
-      handleMouseLeave,
-      handleZoneClick,
-    ],
+    [handleMouseEnter, handleMouseLeave, handleZoneClick],
   );
 
   useEffect(() => {
@@ -143,10 +127,7 @@ export function useOperationalZones({
       return;
     }
 
-    updateOperationalZoneSource(
-      map,
-      featureCollection,
-    );
+    updateOperationalZoneSource(map, featureCollection);
   }, [featureCollection, map]);
 
   useEffect(() => {
@@ -162,10 +143,7 @@ export function useOperationalZones({
       return;
     }
 
-    selectOperationalZoneLayer(
-      map,
-      selectedZoneId,
-    );
+    selectOperationalZoneLayer(map, selectedZoneId);
   }, [map, selectedZoneId]);
 
   const fitSelectedZone = useCallback(() => {
@@ -173,30 +151,23 @@ export function useOperationalZones({
       return;
     }
 
-    const bounds =
-      calculateOperationalZoneBounds(selectedZone);
+    const bounds = calculateOperationalZoneBounds(selectedZone);
 
     if (!bounds) {
       return;
     }
 
-    map.fitBounds(
-      [
-        bounds.southwest,
-        bounds.northeast,
-      ],
-      {
-        padding: {
-          top: 80,
-          right: 380,
-          bottom: 80,
-          left: 340,
-        },
-        duration: 900,
-        maxZoom: 15,
-        essential: true,
+    map.fitBounds([bounds.southwest, bounds.northeast], {
+      padding: {
+        top: 80,
+        right: 380,
+        bottom: 80,
+        left: 340,
       },
-    );
+      duration: 900,
+      maxZoom: 15,
+      essential: true,
+    });
   }, [map, selectedZone]);
 
   const fitAllZones = useCallback(() => {
@@ -204,45 +175,28 @@ export function useOperationalZones({
       return;
     }
 
-    let minimumLongitude =
-      Number.POSITIVE_INFINITY;
+    let minimumLongitude = Number.POSITIVE_INFINITY;
 
-    let minimumLatitude =
-      Number.POSITIVE_INFINITY;
+    let minimumLatitude = Number.POSITIVE_INFINITY;
 
-    let maximumLongitude =
-      Number.NEGATIVE_INFINITY;
+    let maximumLongitude = Number.NEGATIVE_INFINITY;
 
-    let maximumLatitude =
-      Number.NEGATIVE_INFINITY;
+    let maximumLatitude = Number.NEGATIVE_INFINITY;
 
     for (const zone of zones) {
-      const bounds =
-        calculateOperationalZoneBounds(zone);
+      const bounds = calculateOperationalZoneBounds(zone);
 
       if (!bounds) {
         continue;
       }
 
-      minimumLongitude = Math.min(
-        minimumLongitude,
-        bounds.southwest[0],
-      );
+      minimumLongitude = Math.min(minimumLongitude, bounds.southwest[0]);
 
-      minimumLatitude = Math.min(
-        minimumLatitude,
-        bounds.southwest[1],
-      );
+      minimumLatitude = Math.min(minimumLatitude, bounds.southwest[1]);
 
-      maximumLongitude = Math.max(
-        maximumLongitude,
-        bounds.northeast[0],
-      );
+      maximumLongitude = Math.max(maximumLongitude, bounds.northeast[0]);
 
-      maximumLatitude = Math.max(
-        maximumLatitude,
-        bounds.northeast[1],
-      );
+      maximumLatitude = Math.max(maximumLatitude, bounds.northeast[1]);
     }
 
     if (

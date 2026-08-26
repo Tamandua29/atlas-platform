@@ -9,13 +9,9 @@ export class SystemClock implements Clock {
 }
 
 export class FixedClock implements Clock {
-  constructor(
-    private readonly fixedDate: Date,
-  ) {}
+  constructor(private readonly fixedDate: Date) {}
 
   now(): Date {
-    return new Date(
-      this.fixedDate.getTime(),
-    );
+    return new Date(this.fixedDate.getTime());
   }
 }

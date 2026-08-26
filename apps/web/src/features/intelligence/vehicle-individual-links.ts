@@ -30,8 +30,9 @@ export async function listIndividualsForVehicle(
   const vehicle = records[0];
   if (!vehicle) return [];
 
-  const candidates = extractLinkedRecordIds(vehicle.fields)
-    .filter((recordId) => recordId !== vehicleRecordId);
+  const candidates = extractLinkedRecordIds(vehicle.fields).filter(
+    (recordId) => recordId !== vehicleRecordId,
+  );
   const individuals = await Promise.all(
     candidates.map((recordId) => getIndividualDirectoryEntry(recordId)),
   );

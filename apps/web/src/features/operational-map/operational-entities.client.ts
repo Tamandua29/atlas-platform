@@ -15,8 +15,7 @@ type OperationalEntitiesApiErrorResponse = {
 };
 
 type OperationalEntitiesApiResponse =
-  | OperationalEntitiesApiSuccessResponse
-  | OperationalEntitiesApiErrorResponse;
+  OperationalEntitiesApiSuccessResponse | OperationalEntitiesApiErrorResponse;
 
 export type OperationalEntitiesResult = {
   entities: OperationalEntity[];
@@ -38,23 +37,19 @@ export class OperationalEntitiesRequestError extends Error {
 export async function fetchOperationalEntities(
   signal?: AbortSignal,
 ): Promise<OperationalEntitiesResult> {
-  const response = await fetch(
-    "/api/operational-entities",
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-      signal,
+  const response = await fetch("/api/operational-entities", {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
     },
-  );
+    cache: "no-store",
+    signal,
+  });
 
   let body: OperationalEntitiesApiResponse;
 
   try {
-    body =
-      (await response.json()) as OperationalEntitiesApiResponse;
+    body = (await response.json()) as OperationalEntitiesApiResponse;
   } catch {
     throw new OperationalEntitiesRequestError(
       "A API retornou uma resposta inválida.",
@@ -63,15 +58,11 @@ export async function fetchOperationalEntities(
   }
 
   if (!response.ok || !body.success) {
-    const message =
-      !body.success
-        ? body.message
-        : "Não foi possível carregar os dados operacionais.";
+    const message = !body.success
+      ? body.message
+      : "Não foi possível carregar os dados operacionais.";
 
-    throw new OperationalEntitiesRequestError(
-      message,
-      response.status,
-    );
+    throw new OperationalEntitiesRequestError(message, response.status);
   }
 
   return {

@@ -34,7 +34,8 @@ export function OperationalZonesPanel({
             Áreas de referência
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            {enabled ? "Camada visível" : "Camada oculta"} · {source === "airtable" ? "Fonte persistida" : "Fallback sintético"}
+            {enabled ? "Camada visível" : "Camada oculta"} ·{" "}
+            {source === "airtable" ? "Fonte persistida" : "Fallback sintético"}
           </p>
         </div>
 
@@ -76,7 +77,9 @@ export function OperationalZonesPanel({
                     aria-hidden="true"
                   />
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{zone.name}</span>
+                    <span className="block truncate font-medium">
+                      {zone.name}
+                    </span>
                     <span className="block text-xs text-slate-500">
                       {configuration.label}
                     </span>
