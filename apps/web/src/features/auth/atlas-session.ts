@@ -12,6 +12,18 @@ export type AtlasSession = {
 const COOKIE_NAME = "atlas_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 8;
 
+export function atlasSessionCookieOptions(
+  isProduction = process.env.NODE_ENV === "production",
+) {
+  return {
+    httpOnly: true as const,
+    sameSite: "strict" as const,
+    secure: isProduction,
+    path: "/" as const,
+    priority: "high" as const,
+  };
+}
+
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -94,12 +106,8 @@ export async function createAtlasSession(): Promise<AtlasSession> {
   const token = `${payload}.${await sign(payload, secret)}`;
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
+    ...atlasSessionCookieOptions(),
     maxAge: SESSION_DURATION_SECONDS,
-    priority: "high",
   });
   return session;
 }
@@ -107,13 +115,29 @@ export async function createAtlasSession(): Promise<AtlasSession> {
 export async function clearAtlasSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, "", {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
+    ...atlasSessionCookieOptions(),
     maxAge: 0,
-    priority: "high",
   });
+}
+
+export function isValidAtlasSession(
+  session: unknown,
+  now = Math.floor(Date.now() / 1000),
+): session is AtlasSession {
+  if (!session || typeof session !== "object") return false;
+  const candidate = session as Partial<AtlasSession>;
+  return (
+    typeof candidate.actorId === "string" &&
+    candidate.actorId.length >= 3 &&
+    (candidate.role === "reviewer" ||
+      candidate.role === "auditor" ||
+      candidate.role === "administrator") &&
+    typeof candidate.issuedAt === "number" &&
+    candidate.issuedAt <= now + 60 &&
+    typeof candidate.expiresAt === "number" &&
+    candidate.expiresAt > now &&
+    candidate.expiresAt - candidate.issuedAt <= SESSION_DURATION_SECONDS
+  );
 }
 
 export async function readAtlasSession(): Promise<AtlasSession | null> {
@@ -132,23 +156,11 @@ export async function readAtlasSession(): Promise<AtlasSession | null> {
   );
   if (!valid) return null;
   try {
-    const session = JSON.parse(
+    const session: unknown = JSON.parse(
       new TextDecoder().decode(base64UrlToBytes(payload)),
-    ) as AtlasSession;
+    );
     const now = Math.floor(Date.now() / 1000);
-    if (
-      typeof session.actorId !== "string" ||
-      session.actorId.length < 3 ||
-      (session.role !== "reviewer" &&
-        session.role !== "auditor" &&
-        session.role !== "administrator") ||
-      typeof session.issuedAt !== "number" ||
-      session.issuedAt > now + 60 ||
-      typeof session.expiresAt !== "number" ||
-      session.expiresAt <= now ||
-      session.expiresAt - session.issuedAt > SESSION_DURATION_SECONDS
-    )
-      return null;
+    if (!isValidAtlasSession(session, now)) return null;
     return session;
   } catch {
     return null;
