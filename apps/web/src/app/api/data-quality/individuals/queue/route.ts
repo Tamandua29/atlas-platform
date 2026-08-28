@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
+import { rolesForAtlasCapability } from "@/features/auth/atlas-capabilities";
 import {
   listSafeIndividualQualityQueue,
   type QualityPriority,
@@ -20,7 +21,9 @@ function parsePriority(value: string | null): QualityPriority | "all" {
 }
 
 export async function GET(request: NextRequest) {
-  const authorization = await authorizeAtlas(["reviewer", "auditor"]);
+  const authorization = await authorizeAtlas(
+    rolesForAtlasCapability("consult"),
+  );
   if (!authorization.authorized) return authorization.response;
 
   const { session } = authorization;
