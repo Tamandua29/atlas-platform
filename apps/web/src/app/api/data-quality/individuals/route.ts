@@ -3,12 +3,15 @@ import { NextResponse } from "next/server";
 
 import { persistAuditSafely } from "@/features/audit/airtable-audit-repository";
 import { authorizeAtlas } from "@/features/auth/authorize-atlas";
+import { rolesForAtlasCapability } from "@/features/auth/atlas-capabilities";
 import { getIndividualDataQualityMetrics } from "@/features/individuals/individual-data-quality";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const authorization = await authorizeAtlas(["reviewer", "auditor"]);
+  const authorization = await authorizeAtlas(
+    rolesForAtlasCapability("consult"),
+  );
   if (!authorization.authorized) return authorization.response;
 
   const { session } = authorization;

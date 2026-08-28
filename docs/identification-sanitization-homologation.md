@@ -15,9 +15,9 @@ Este documento define o encerramento do escopo do módulo. “100%” significa 
 
 - [x] Sessão inválida ou expirada retorna 401.
 - [x] Papel sem permissão retorna 403.
-- [ ] Auditor consulta, mas não decide nem escreve.
-- [ ] Revisor trata e propõe apenas nos fluxos autorizados.
-- [ ] Administrador mantém as autorizações explicitamente previstas.
+- [x] Auditor consulta e reconcilia, mas não propõe, decide, executa nem altera o fluxo.
+- [x] Revisor trata e propõe apenas nos fluxos autorizados, sem acessar a reconciliação.
+- [x] Administrador mantém as autorizações explicitamente previstas.
 - [x] Cinco credenciais inválidas bloqueiam temporariamente novas tentativas.
 - [x] Cookie permanece HttpOnly, SameSite=Strict e Secure em produção.
 - [ ] Credenciais expostas durante desenvolvimento foram revogadas e substituídas.
